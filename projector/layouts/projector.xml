@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container scrollable="0" size="500,500" color="#000000cc">
+    <label pos="210,10" id="title">Projector</label>
+    <container color="#00000099" scrollable="0" size="230,200" pos="10,30">
+        <label pos="10,10">Projection size in blocks:</label>
+        <textbox id="projection_size_x" placeholder="Size X" size="100,30" pos="10,30"/>
+        <textbox size="100,30" id="projection_size_y" placeholder="Size Y" pos="120,30"/>
+        <label pos="10,70">Projection offset in block:</label>
+        <textbox size="100,30" pos="10,90" placeholder="Offset X" id="projection_offset_x"/>
+        <textbox size="100,30" id="projection_offset_y" pos="120,90" placeholder="Offset Y"/>
+        <label pos="10,130">Capture size in pixels:</label>
+        <textbox size="100,30" id="capture_size_x" placeholder="Size X" pos="10,150" enabled="0"/>
+        <textbox size="100,30" pos="120,150" id="capture_size_y" placeholder="Size X" enabled="0"/>
+    </container>
+    <container color="#00000099" scrollable="0" size="230,200" pos="260,30">
+        <label pos="10,10">Projection refresh rate:</label>
+        <textbox id="refresh_rate" pos="10,30" size="210,30" placeholder="Framerate"/>
+        <checkbox size="200,30" pos="10,70" id="optimization">Idle optimization</checkbox>
+        <button id="axis" size="210,30" pos="10,150">Axis</button>
+        <button id="orientation" size="210,30" pos="10,110">Orientation</button>
+    </container>
+    <panel size="480,190" pos="10,300" id="logs"/>
+    <button size="480,30" pos="10,240" id="button">The button</button>
+    <label pos="10,280">Logs:</label>
+</container>
