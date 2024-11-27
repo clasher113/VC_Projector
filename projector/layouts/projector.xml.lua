@@ -10,7 +10,8 @@ local sync_button
 local orientation_button
 local axis_button
 local optimization_checkbox
-local refresh_rate_textbox
+local refresh_rate_trackbar
+local refresh_rate_label
 local projection_size_x_textbox
 local projection_size_y_textbox
 local projection_offset_x_textbox
@@ -22,14 +23,25 @@ local default_projection_size_x = "64"
 local default_projection_size_y = "64"
 local default_projection_offset_x = "0"
 local default_projection_offset_y = "0"
-local default_refresh_rate = "15"
+local default_refresh_rate = 15
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
 
-local logs_num = 0
-local synchronized = false
+local logs_num = 1
 local started = false
+local on_game_update_added = false
+
+function on_game_update()
+	SYNC.sync()
+	if (SYNC.isSyncing == false) then
+		if (string.len(SYNC.status) > 0) then
+			sync_button.enabled = true
+			log_message(SYNC.status)
+			SYNC.status = ""
+		end
+	end
+end
 
 function on_open()
 	-- retreive elements
@@ -42,7 +54,8 @@ function on_open()
 	orientation_button = document["orientation"]
 	axis_button = document["axis"]
 	optimization_checkbox = document["optimization"]
-	refresh_rate_textbox = document["refresh_rate"]
+	refresh_rate_trackbar = document["refresh_rate"]
+	refresh_rate_label = document["refresh_rate_label"]
 	projection_size_x_textbox = document["projection_size_x"]
 	projection_size_y_textbox = document["projection_size_y"]
 	projection_offset_x_textbox = document["projection_offset_x"]
@@ -51,7 +64,7 @@ function on_open()
 	capture_size_y_textbox = document["capture_size_y"]
 
 	-- set default values
-	refresh_rate_textbox.text = default_refresh_rate
+	refresh_rate_trackbar.value = default_refresh_rate
 	projection_size_x_textbox.text = default_projection_size_x
 	projection_size_y_textbox.text = default_projection_size_y
 	projection_offset_x_textbox.text = default_projection_offset_x
@@ -65,13 +78,24 @@ function on_open()
 		file.mkdir(SYNC.working_directory)
 	end
 
+	if (on_game_update_added == false) then
+		settings_container_1:setInterval(1, on_game_update)
+		on_game_update_added = true
+	end
 	set_status("Idle")
 end
 
 function log_message(string)
 	local size = logs_panel.size
-	logs_panel:add("<label id='" .. tostring(logs_num) .. "' multiline='true' text-wrap='true'>" .. string .. "</label>")
+	local color = (logs_num % 2 == 0 and "#ffffff10" or "#ffffff00")
+	logs_panel:add("<textbox id='log" .. tostring(logs_num) .. "' color='" .. color .. "' editable='false' multiline='true' text-wrap='true' autoresize='true'>" .. string .. "</textbox>")
+	local current_elem = logs_num
+	while current_elem > 0 do
+		document["log" .. tostring(current_elem)]:moveInto(logs_panel)
+		current_elem = current_elem - 1
+    end
 	logs_panel.size = size
+	logs_num = logs_num + 1
 end
 
 function set_status(string)
@@ -79,30 +103,30 @@ function set_status(string)
 end
 
 function main_button_func()
-	if (synchronized == true and started == false) then
+	if (SYNC.synchronized == true and started == false) then
 		settings_container_1.enabled = false
 		settings_container_2.enabled = false
+		sync_button.enabled = false
 		main_button.text = "Stop"
 		started = true
 	elseif (started == true) then
 		settings_container_1.enabled = true
 		settings_container_2.enabled = true
+		sync_button.enabled = true
 		main_button.text = "Start"
 		started = false
-	elseif (synchronized == false)then
+	elseif (SYNC.synchronized == false)then
 		log_message("You must synchronize first")
 	end
 end
 
 function synchronize()
-	--sync_button.enabled = false
+	sync_button.enabled = false
 	log_message("Synchronization...")
 	SYNC.send("sync")
 	SYNC.isSyncing = true
 	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
 	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
-
-	--synchronized = true
 end
 
 function index_of(array, value)
@@ -151,9 +175,7 @@ function handle_textbox(string, min, max, textbox_id)
 end
 
 function fps_consumer(string)
-	if (handle_textbox(string, 1, 60, "Refresh rate") == false) then
-		refresh_rate_textbox.text = default_refresh_rate
-	end
+	refresh_rate_label.text = "Projection refresh rate: " .. tostring(refresh_rate_trackbar.value)
 	synchronized = false
 end
 
