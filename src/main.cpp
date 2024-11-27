@@ -192,6 +192,9 @@ int main(){
 					grabbedOffset = window.getPosition() - sf::Mouse::getPosition();
 					grabbedWindow = true;
 				}
+				else if (e.mouseButton.button == sf::Mouse::Right) {
+					window.close();
+				}
 			}
 			else if (e.type == sf::Event::MouseButtonReleased) {
 				if (e.mouseButton.button == sf::Mouse::Left)
