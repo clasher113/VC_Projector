@@ -1,3 +1,6 @@
+require "projector:synchronizer"
+require "projector:display"
+
 local logs_panel
 local status_label
 local settings_container_1
@@ -23,7 +26,10 @@ local default_refresh_rate = "15"
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
+
 local logs_num = 0
+local synchronized = false
+local started = false
 
 function on_open()
 	-- retreive elements
@@ -31,7 +37,7 @@ function on_open()
 	status_label = document["status"]
 	settings_container_1 = document["settings_1"]
 	settings_container_2 = document["settings_2"]
-	main_button = document["button"]
+	main_button = document["main_button"]
 	sync_button = document["sync"]
 	orientation_button = document["orientation"]
 	axis_button = document["axis"]
@@ -55,6 +61,10 @@ function on_open()
 	orientation_button.text = "Orientation: " .. orientations[1]
 	axis_button.text = "Axis: " .. axes[1]
 
+	if (file.isdir(SYNC.working_directory) == false) then
+		file.mkdir(SYNC.working_directory)
+	end
+
 	set_status("Idle")
 end
 
@@ -68,15 +78,31 @@ function set_status(string)
 	status_label.text = "Status: " .. string
 end
 
-function test_func()
-   log_message("test") 
-   set_status("new status")
-   settings_container_1.enabled = false
-   settings_container_2.enabled = false
+function main_button_func()
+	if (synchronized == true and started == false) then
+		settings_container_1.enabled = false
+		settings_container_2.enabled = false
+		main_button.text = "Stop"
+		started = true
+	elseif (started == true) then
+		settings_container_1.enabled = true
+		settings_container_2.enabled = true
+		main_button.text = "Start"
+		started = false
+	elseif (synchronized == false)then
+		log_message("You must synchronize first")
+	end
 end
 
 function synchronize()
+	--sync_button.enabled = false
 	log_message("Synchronization...")
+	SYNC.send("sync")
+	SYNC.isSyncing = true
+	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
+	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
+
+	--synchronized = true
 end
 
 function index_of(array, value)
@@ -97,6 +123,7 @@ function toggle_orientation()
 	end
 	orientation_button.text = "Orientation: " .. orientations[index]
 	axis_button.visible = (index ~= 2)
+	synchronized = false
 end
 
 function toggle_axis()
@@ -107,6 +134,7 @@ function toggle_axis()
 		index = 1
 	end
 	axis_button.text = "Axis: " .. axes[index]
+	synchronized = false
 end
 
 function handle_textbox(string, min, max, textbox_id)
@@ -126,6 +154,7 @@ function fps_consumer(string)
 	if (handle_textbox(string, 1, 60, "Refresh rate") == false) then
 		refresh_rate_textbox.text = default_refresh_rate
 	end
+	synchronized = false
 end
 
 function projection_size_x_consumer(string)
@@ -133,6 +162,7 @@ function projection_size_x_consumer(string)
 		projection_size_x_textbox.text = default_projection_size_x
 	end
 	capture_size_x_textbox.text = projection_size_x_textbox.text
+	synchronized = false
 end
 
 function projection_size_y_consumer(string)
@@ -140,16 +170,19 @@ function projection_size_y_consumer(string)
 		projection_size_y_textbox.text = default_projection_size_y
 	end
 	capture_size_y_textbox.text = projection_size_y_textbox.text
+	synchronized = false
 end
 
 function projection_offset_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection offset X") == false) then
 		projection_offset_x_textbox.text = default_projection_offset_x
 	end
+	synchronized = false
 end
 
 function projection_offset_y_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Y") == false) then
 		projection_offset_y_textbox.text = default_projection_offset_y
 	end
+	synchronized = false
 end

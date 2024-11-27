@@ -20,7 +20,7 @@
         <button id="orientation" onclick="toggle_orientation()" size="210,30" pos="10,110">Orientation</button>
     </container>
     <panel size="480,190" pos="10,360" id="logs" max-length="190"/>
-    <button size="480,30" onclick="test_func()" id="button" pos="10,300">The button</button>
+    <button size="480,30" onclick="main_button_func()" id="main_button" pos="10,300">Start</button>
     <label pos="10,340">Logs:</label>
     <label id="status" pos="10,240">Status:</label>
     <button id="sync" size="480,30" pos="10,260" onclick="synchronize()">Synchronize</button>
