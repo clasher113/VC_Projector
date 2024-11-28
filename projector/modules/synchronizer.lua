@@ -27,21 +27,24 @@ SYNC.receive = function ()
 end
 
 SYNC.sync = function ()
-	if (SYNC.isSyncing == true) then
-		sync_timer = sync_timer + time.delta()
-		if (sync_timer > sync_timeout) then
-			sync_timer = 0.0
+	sync_timer = sync_timer + time.delta()
+	if (sync_timer > sync_timeout) then
+		sync_timer = 0.0
+		SYNC.isSyncing = false
+		SYNC.status = "Synchronization timeout"
+	end
+	if (SYNC.receive() == true) then
+		if (SYNC.inData == "sync") then
+			SYNC.send(tostring(DISPLAY.refresh_rate) .. ":" .. tostring(DISPLAY.resolution_x) .. ":" .. tostring(DISPLAY.resolution_y))
 			SYNC.isSyncing = false
-			SYNC.status = "Synchronization timeout"
-		end
-		if (SYNC.receive() == true) then
-			if (SYNC.inData == "sync") then
-				SYNC.send(tostring(DISPLAY.resolution_x) .. ":" .. tostring(DISPLAY.resolution_y))
-				SYNC.isSyncing = false
-				SYNC.status = "Synchronization success"
-				SYNC.synchronized = true
-			end
+			SYNC.status = "Synchronization success"
+			SYNC.synchronized = true
 		end
 	end
 end
 
+SYNC.capture = function ()
+	if (SYNC.receive() == true) then
+		
+	end
+end

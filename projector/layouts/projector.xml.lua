@@ -16,14 +16,9 @@ local projection_size_x_textbox
 local projection_size_y_textbox
 local projection_offset_x_textbox
 local projection_offset_y_textbox
+local projection_offset_z_textbox
 local capture_size_x_textbox
 local capture_size_y_textbox
-
-local default_projection_size_x = "64"
-local default_projection_size_y = "64"
-local default_projection_offset_x = "0"
-local default_projection_offset_y = "0"
-local default_refresh_rate = 15
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
@@ -33,13 +28,18 @@ local started = false
 local on_game_update_added = false
 
 function on_game_update()
-	SYNC.sync()
-	if (SYNC.isSyncing == false) then
+	if (SYNC.isSyncing == true) then
+		SYNC.sync()
+	else 
 		if (string.len(SYNC.status) > 0) then
 			sync_button.enabled = true
 			log_message(SYNC.status)
 			SYNC.status = ""
 		end
+	end
+	if (SYNC.isCapturing == true) then
+		SYNC.capture()
+		DISPLAY.update()
 	end
 end
 
@@ -60,19 +60,9 @@ function on_open()
 	projection_size_y_textbox = document["projection_size_y"]
 	projection_offset_x_textbox = document["projection_offset_x"]
 	projection_offset_y_textbox = document["projection_offset_y"]
+	projection_offset_z_textbox = document["projection_offset_z"]
 	capture_size_x_textbox = document["capture_size_x"]
 	capture_size_y_textbox = document["capture_size_y"]
-
-	-- set default values
-	refresh_rate_trackbar.value = default_refresh_rate
-	projection_size_x_textbox.text = default_projection_size_x
-	projection_size_y_textbox.text = default_projection_size_y
-	projection_offset_x_textbox.text = default_projection_offset_x
-	projection_offset_y_textbox.text = default_projection_offset_x
-	capture_size_x_textbox.text = projection_size_x_textbox.text
-	capture_size_y_textbox.text = projection_size_y_textbox.text
-	orientation_button.text = "Orientation: " .. orientations[1]
-	axis_button.text = "Axis: " .. axes[1]
 
 	if (file.isdir(SYNC.working_directory) == false) then
 		file.mkdir(SYNC.working_directory)
@@ -90,10 +80,9 @@ function log_message(string)
 	local color = (logs_num % 2 == 0 and "#ffffff10" or "#ffffff00")
 	logs_panel:add("<textbox id='log" .. tostring(logs_num) .. "' color='" .. color .. "' editable='false' multiline='true' text-wrap='true' autoresize='true'>" .. string .. "</textbox>")
 	local current_elem = logs_num
-	while current_elem > 0 do
-		document["log" .. tostring(current_elem)]:moveInto(logs_panel)
-		current_elem = current_elem - 1
-    end
+	for i=logs_num,1,-1 do 
+		document["log" .. tostring(i)]:moveInto(logs_panel)
+	end
 	logs_panel.size = size
 	logs_num = logs_num + 1
 end
@@ -107,12 +96,14 @@ function main_button_func()
 		settings_container_1.enabled = false
 		settings_container_2.enabled = false
 		sync_button.enabled = false
+		SYNC.isCapturing = true
 		main_button.text = "Stop"
 		started = true
 	elseif (started == true) then
 		settings_container_1.enabled = true
 		settings_container_2.enabled = true
 		sync_button.enabled = true
+		SYNC.isCapturing = false
 		main_button.text = "Start"
 		started = false
 	elseif (SYNC.synchronized == false)then
@@ -120,13 +111,21 @@ function main_button_func()
 	end
 end
 
+function init_display()
+	DISPLAY.refresh_rate = refresh_rate_trackbar.value
+	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
+	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
+	DISPLAY.offset_x = tonumber(projection_offset_x_textbox.text)
+	DISPLAY.offset_y = tonumber(projection_offset_y_textbox.text)
+	DISPLAY.offset_z = tonumber(projection_offset_z_textbox.text)
+end
+
 function synchronize()
 	sync_button.enabled = false
 	log_message("Synchronization...")
 	SYNC.send("sync")
 	SYNC.isSyncing = true
-	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
-	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
+	init_display()
 end
 
 function index_of(array, value)
@@ -147,7 +146,7 @@ function toggle_orientation()
 	end
 	orientation_button.text = "Orientation: " .. orientations[index]
 	axis_button.visible = (index ~= 2)
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function toggle_axis()
@@ -158,7 +157,7 @@ function toggle_axis()
 		index = 1
 	end
 	axis_button.text = "Axis: " .. axes[index]
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function handle_textbox(string, min, max, textbox_id)
@@ -176,7 +175,7 @@ end
 
 function fps_consumer(string)
 	refresh_rate_label.text = "Projection refresh rate: " .. tostring(refresh_rate_trackbar.value)
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function projection_size_x_consumer(string)
@@ -184,7 +183,7 @@ function projection_size_x_consumer(string)
 		projection_size_x_textbox.text = default_projection_size_x
 	end
 	capture_size_x_textbox.text = projection_size_x_textbox.text
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function projection_size_y_consumer(string)
@@ -192,19 +191,25 @@ function projection_size_y_consumer(string)
 		projection_size_y_textbox.text = default_projection_size_y
 	end
 	capture_size_y_textbox.text = projection_size_y_textbox.text
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function projection_offset_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection offset X") == false) then
 		projection_offset_x_textbox.text = default_projection_offset_x
 	end
-	synchronized = false
+	SYNC.synchronized = false
 end
 
 function projection_offset_y_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Y") == false) then
 		projection_offset_y_textbox.text = default_projection_offset_y
 	end
-	synchronized = false
+	SYNC.synchronized = false
+end
+
+function clear_display()
+	init_display()
+	DISPLAY.clear()
+	log_message("Display cleaned")
 end
