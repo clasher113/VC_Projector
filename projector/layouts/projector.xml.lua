@@ -37,10 +37,6 @@ function on_game_update()
 			SYNC.status = ""
 		end
 	end
-	if (SYNC.isCapturing == true) then
-		SYNC.capture()
-		DISPLAY.update()
-	end
 end
 
 function on_open()
@@ -99,6 +95,8 @@ function main_button_func()
 		SYNC.isCapturing = true
 		main_button.text = "Stop"
 		started = true
+		SYNC.send("start")
+		log_message("Capturing started")
 	elseif (started == true) then
 		settings_container_1.enabled = true
 		settings_container_2.enabled = true
@@ -106,6 +104,8 @@ function main_button_func()
 		SYNC.isCapturing = false
 		main_button.text = "Start"
 		started = false
+		SYNC.send("stop")
+		log_message("Capturing stopped")
 	elseif (SYNC.synchronized == false)then
 		log_message("You must synchronize first")
 	end

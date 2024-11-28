@@ -12,10 +12,17 @@ DISPLAY.position_z = 0
 
 local refresh_timer = 0.0
 
-function vertical(callback)
-	-- body
-end
+function value_by_index(array, index)
+	local i = 0
+    for k, v in pairs(array) do
+		i = i + 1
+        if i == index then
+            return v
+        end
+    end
 
+    return nil
+end
 
 DISPLAY.update = function ()
 	local refresh_interval = 1.0 / DISPLAY.refresh_rate
@@ -25,13 +32,18 @@ DISPLAY.update = function ()
 
 		-- vertical
 		local x_start = DISPLAY.position_x + DISPLAY.offset_x
-		local x_end = x_start + DISPLAY.resolution_x
+		local x_end = x_start + DISPLAY.resolution_x - 1
 		local y_start = DISPLAY.position_y + DISPLAY.offset_y
-		local y_end = y_start + DISPLAY.resolution_y
-		for x=x_start, x_end, 1 do 
-			for y=y_start, y_end, 1 do 
-				local index = block.index("projector:black"..tostring(math.random(0, 15)))
+		local y_end = y_start + DISPLAY.resolution_y - 1
+
+		local pixels = string.split(SYNC.inData, ":")
+
+		local i = 1
+		for y=y_start, y_end, 1 do 
+			for x=x_start, x_end, 1 do 
+				local index = block.index("projector:black" .. pixels[i])
 				block.set(x, y, DISPLAY.position_z, index, 0)
+				i = i + 1
 			end
 		end
 	end

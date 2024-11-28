@@ -39,12 +39,20 @@ SYNC.sync = function ()
 			SYNC.isSyncing = false
 			SYNC.status = "Synchronization success"
 			SYNC.synchronized = true
+		elseif (SYNC.inData == "start") then
+			SYNC.isCapturing = true
+			SYNC.status = "Capture started"
 		end
 	end
 end
 
 SYNC.capture = function ()
 	if (SYNC.receive() == true) then
-		
+		if (SYNC.inData == "start") then
+			return false
+		else
+			return true
+		end
 	end
+	return false
 end
