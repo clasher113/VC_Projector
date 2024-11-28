@@ -69,7 +69,6 @@ int main(){
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
 
 	sf::Color* rgbPixels = new sf::Color[displayReadSize.x * displayReadSize.y];
-	uint8_t* monochromePixels = new uint8_t[displayReadSize.x * displayReadSize.y];
 	Status currentStatus = Status::WAITING;
 
 	sf::RectangleShape border;
@@ -136,6 +135,12 @@ int main(){
 					setWindowSize(window, displayReadSize);
 					updateBorder(border);
 					updateStatusSprite(statusContainerSprite);
+
+					bmi.bmiHeader.biHeight = displayReadSize.y;
+					bmi.bmiHeader.biWidth = displayReadSize.x;
+
+					delete[] rgbPixels;
+					sf::Color* rgbPixels = new sf::Color[displayReadSize.x * displayReadSize.y];
 				}
 				catch (const std::exception& e) {
 					std::cout << "Synchonization error" << std::endl;
@@ -153,17 +158,26 @@ int main(){
 				}
 			}
 		}
-		else if (currentStatus == Status::READY){
-
+		else if (currentStatus == Status::READY) {
+			if (!commands.empty()) {
+				if (commands[0] == "start") {
+					setStatus(statusText, currentStatus, Status::CAPTURING);
+					sendMessage("start");
+				}
+			}
 		}
 		else if (currentStatus == Status::CAPTURING){
-			BitBlt(hCaptureDC, 0, 0, displayReadSize.x, displayReadSize.y, desktopHdc, window.getPosition().x, window.getPosition().y, SRCCOPY);
+			BitBlt(hCaptureDC, 0, 0, displayReadSize.x, displayReadSize.y, desktopHdc, window.getPosition().x + borderThickness, window.getPosition().y + borderThickness, SRCCOPY);
 			GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSize.y, &rgbPixels[0], &bmi, DIB_RGB_COLORS);
 
+			std::string outMessage;
+			outMessage.reserve(displayReadSize.x * displayReadSize.y * 3);
 			for (size_t i = 0; i < displayReadSize.x * displayReadSize.y; i++) {
 				const sf::Color& rgbPixel = rgbPixels[i];
-				monochromePixels[i] = 0.2126 * (rgbPixel.r / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.b / 255.f);
+				outMessage.append(std::to_string(static_cast<int>((0.2126 * (rgbPixel.r / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.b / 255.f)) * 10)) + ':');
 			}
+			outMessage.append("0");
+			sendMessage(outMessage);
 		}
 
 		if (currentStatus != Status::WAITING){
@@ -174,7 +188,7 @@ int main(){
 				setStatus(statusText, currentStatus, Status::WAITING);
 			}
 		}
-		if (currentStatus == Status::CONNECTED || currentStatus == Status::READY) {
+		if (currentStatus != Status::SYNCING && currentStatus != Status::WAITING) {
 			if (!commands.empty()) {
 				if (commands[0] == "sync") {
 					setStatus(statusText, currentStatus, Status::SYNCING);
@@ -182,6 +196,9 @@ int main(){
 				}
 				else if (commands[0] == "disconnect"){
 					setStatus(statusText, currentStatus, Status::CONNECTED);
+				}
+				else if (commands[0] == "stop") {
+					setStatus(statusText, currentStatus, Status::READY);
 				}
 			}
 		}
@@ -219,7 +236,6 @@ int main(){
 	}
 
 	delete[] rgbPixels;
-	delete[] monochromePixels;
 
 	return 0;
 }
@@ -283,7 +299,7 @@ std::vector<std::string> readOutFile() {
 
 void sendMessage(const std::string& message) {
 	fs::path inFile(workingDirectory / "in");
-	std::ofstream ofs(inFile, std::ios::out | std::ios::trunc);
+	std::fstream ofs(inFile);
 	ofs << message;
 	ofs.close();
 }
