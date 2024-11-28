@@ -51,6 +51,7 @@ int main(){
 
 	SetWindowLong(window.getSystemHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
 	DwmExtendFrameIntoClientArea(window.getSystemHandle(), &margins);
+	SetWindowPos(window.getSystemHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	HWND desktop = GetDesktopWindow();
 	HDC desktopHdc = GetDC(desktop);
@@ -130,7 +131,8 @@ int main(){
 			Status newStatus = Status::READY;
 			if (!commands.empty()) {
 				try {
-					displayReadSize = sf::Vector2u(stoi(commands.at(0)), stoi(commands.at(1)));
+					window.setFramerateLimit(stoi(commands.at(1)));
+					displayReadSize = sf::Vector2u(stoi(commands.at(1)), stoi(commands.at(2)));
 					setWindowSize(window, displayReadSize);
 					updateBorder(border);
 					updateStatusSprite(statusContainerSprite);
