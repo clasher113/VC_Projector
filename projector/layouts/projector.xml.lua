@@ -24,7 +24,6 @@ local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
 
 local logs_num = 1
-local started = false
 local on_game_update_added = false
 
 function on_game_update()
@@ -88,25 +87,23 @@ function set_status(string)
 end
 
 function main_button_func()
-	if (SYNC.synchronized == true and started == false) then
+	if (SYNC.synchronized == true and SYNC.isCapturing == false) then
 		settings_container_1.enabled = false
 		settings_container_2.enabled = false
 		sync_button.enabled = false
 		SYNC.isCapturing = true
 		main_button.text = "Stop"
-		started = true
 		SYNC.send("start")
 		log_message("Capturing started")
-	elseif (started == true) then
+	elseif (SYNC.isCapturing  == true) then
 		settings_container_1.enabled = true
 		settings_container_2.enabled = true
 		sync_button.enabled = true
 		SYNC.isCapturing = false
 		main_button.text = "Start"
-		started = false
 		SYNC.send("stop")
 		log_message("Capturing stopped")
-	elseif (SYNC.synchronized == false)then
+	elseif (SYNC.synchronized == false) then
 		log_message("You must synchronize first")
 	end
 end

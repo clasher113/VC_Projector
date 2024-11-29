@@ -3,19 +3,19 @@
     <label pos="235,10" id="title">Projector</label>
     <container color="#00000099" id="settings_1" scrollable="0" size="250,200" pos="10,30">
         <label pos="10,10">Projection size in blocks:</label>
-        <textbox id="projection_size_x" pos="10,30" consumer="projection_size_x_consumer" placeholder="Size X" size="110,30">64</textbox>
-        <textbox size="110,30" id="projection_size_y" pos="130,30" consumer="projection_size_y_consumer" placeholder="Size Y">64</textbox>
+        <textbox id="projection_size_x" pos="10,30" consumer="projection_size_x_consumer" placeholder="Size X" size="110,30">180</textbox>
+        <textbox size="110,30" id="projection_size_y" pos="130,30" consumer="projection_size_y_consumer" placeholder="Size Y">120</textbox>
         <label pos="10,70">Projection offset in block:</label>
         <textbox consumer="projection_offset_x_consumer" pos="10,90" placeholder="Offset X" id="projection_offset_x" size="70,30">1</textbox>
         <textbox id="projection_offset_y" pos="90,90" consumer="projection_offset_y_consumer" placeholder="Offset Y" size="70,30">0</textbox>
         <label pos="10,130">Capture size in pixels:</label>
-        <textbox size="110,30" id="capture_size_x" placeholder="Size X" pos="10,150" enabled="0">64</textbox>
-        <textbox size="110,30" pos="130,150" id="capture_size_y" placeholder="Size Y" enabled="0">64</textbox>
+        <textbox size="110,30" id="capture_size_x" placeholder="Size X" pos="10,150" enabled="0">189</textbox>
+        <textbox size="110,30" pos="130,150" id="capture_size_y" placeholder="Size Y" enabled="0">120</textbox>
         <textbox size="70,30" pos="170,90" placeholder="Offset Z" id="projection_offset_z">0</textbox>
     </container>
     <container color="#00000099" id="settings_2" scrollable="0" size="250,200" pos="280,30">
-        <label id="refresh_rate_label" pos="10,10">Projection refresh rate: 15</label>
-        <trackbar id="refresh_rate" min="1" pos="10,30" consumer="fps_consumer" max="60" value="15" size="230,30"/>
+        <label id="refresh_rate_label" pos="10,10">Projection refresh rate: 30</label>
+        <trackbar id="refresh_rate" min="1" pos="10,30" consumer="fps_consumer" max="60" value="30" size="230,30"/>
         <checkbox size="200,30" pos="10,70" id="optimization">Idle optimization</checkbox>
         <button onclick="toggle_axis()" id="axis" size="230,30" pos="10,150">Axis: X</button>
         <button onclick="toggle_orientation()" id="orientation" size="230,30" pos="10,110">Orientation: Vertical</button>
