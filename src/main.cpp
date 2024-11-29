@@ -26,7 +26,7 @@ enum class Status {
 unsigned int framerate = 30;
 sf::Vector2u displayReadPos(240, 240);
 sf::Vector2u displayReadSize(240, 120);
-const sf::Vector2u statusContainerSize(300, 30);
+const sf::Vector2u statusContainerSize(200, 30);
 
 constexpr float syncTimeout = 1.f;
 constexpr float borderThickness = 3.f;
@@ -68,7 +68,7 @@ int main(){
 	bmi.bmiHeader.biWidth = displayReadSize.x;
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
 
-	sf::Color* rgbPixels = new sf::Color[displayReadSize.x * displayReadSize.y];
+	sf::Color* pixels = new sf::Color[displayReadSize.x * displayReadSize.y];
 	Status currentStatus = Status::WAITING;
 
 	sf::RectangleShape border;
@@ -139,8 +139,8 @@ int main(){
 					bmi.bmiHeader.biHeight = displayReadSize.y;
 					bmi.bmiHeader.biWidth = displayReadSize.x;
 
-					delete[] rgbPixels;
-					sf::Color* rgbPixels = new sf::Color[displayReadSize.x * displayReadSize.y];
+					delete[] pixels;
+					pixels = new sf::Color[displayReadSize.x * displayReadSize.y];
 				}
 				catch (const std::exception& e) {
 					std::cout << "Synchonization error" << std::endl;
@@ -168,13 +168,13 @@ int main(){
 		}
 		else if (currentStatus == Status::CAPTURING){
 			BitBlt(hCaptureDC, 0, 0, displayReadSize.x, displayReadSize.y, desktopHdc, window.getPosition().x + borderThickness, window.getPosition().y + borderThickness, SRCCOPY);
-			GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSize.y, &rgbPixels[0], &bmi, DIB_RGB_COLORS);
+			GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSize.y, &pixels[0], &bmi, DIB_RGB_COLORS);
 
 			std::string outMessage;
 			outMessage.reserve(displayReadSize.x * displayReadSize.y * 3);
 			for (size_t i = 0; i < displayReadSize.x * displayReadSize.y; i++) {
-				const sf::Color& rgbPixel = rgbPixels[i];
-				outMessage.append(std::to_string(static_cast<int>((0.2126 * (rgbPixel.r / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.b / 255.f)) * 10)) + ':');
+				const sf::Color& rgbPixel = pixels[i];
+				outMessage.append(std::to_string(static_cast<int>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15)) + ':');
 			}
 			outMessage.append("0");
 			sendMessage(outMessage);
@@ -205,19 +205,19 @@ int main(){
 
 		sf::Event e;
 		while(window.pollEvent(e)){
-			if (e.type == sf::Event::Closed) window.close();
+			if (e.type == sf::Event::Closed) 
+				window.close();
 			else if (e.type == sf::Event::MouseButtonPressed) {
 				if (e.mouseButton.button == sf::Mouse::Left) {
 					grabbedOffset = window.getPosition() - sf::Mouse::getPosition();
 					grabbedWindow = true;
 				}
-				else if (e.mouseButton.button == sf::Mouse::Right) {
-					window.close();
-				}
 			}
 			else if (e.type == sf::Event::MouseButtonReleased) {
 				if (e.mouseButton.button == sf::Mouse::Left)
 					grabbedWindow = false;
+				else if (e.mouseButton.button == sf::Mouse::Right)
+					window.close();
 			}
 			else if (e.type == sf::Event::MouseMoved) {
 				if (grabbedWindow)
@@ -235,7 +235,7 @@ int main(){
 		window.display();
 	}
 
-	delete[] rgbPixels;
+	delete[] pixels;
 
 	return 0;
 }
