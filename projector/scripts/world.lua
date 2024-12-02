@@ -2,9 +2,10 @@ require "projector:synchronizer"
 require "projector:display"
 
 function on_world_open()
-	DISPLAY.init()	
+	SYNC.start_server()
+	DISPLAY.init()
 end
 
 function on_world_save()
-	SYNC.send("disconnect")
+	SYNC.close_server()
 end

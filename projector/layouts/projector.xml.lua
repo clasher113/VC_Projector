@@ -27,14 +27,14 @@ local logs_num = 1
 local on_game_update_added = false
 
 function on_game_update()
-	if (SYNC.isSyncing == true) then
-		SYNC.sync()
+	if (SYNC.is_syncing == true) then
+
 	else 
-		if (string.len(SYNC.status) > 0) then
-			sync_button.enabled = true
-			log_message(SYNC.status)
-			SYNC.status = ""
-		end
+
+	end
+	for k,v in pairs(SYNC.statuses) do
+		log_message(v)
+		SYNC.statuses[k] = nil
 	end
 end
 
@@ -120,8 +120,7 @@ end
 function synchronize()
 	sync_button.enabled = false
 	log_message("Synchronization...")
-	SYNC.send("sync")
-	SYNC.isSyncing = true
+	SYNC.is_syncing = true
 	init_display()
 end
 
