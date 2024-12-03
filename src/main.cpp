@@ -58,6 +58,7 @@ int main(){
 	window.setFramerateLimit(framerate);
 	setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
 
+#ifdef _WIN32
 	MARGINS margins{};
 	margins.cxLeftWidth = -1;
 
@@ -79,6 +80,9 @@ int main(){
 	bmi.bmiHeader.biHeight = displayReadSizeY;
 	bmi.bmiHeader.biWidth = displayReadSizeX;
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
+#elif __linux__
+
+#endif // _WIN32
 
 	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 	Status currentStatus = Status::WAITING;
@@ -129,6 +133,7 @@ int main(){
 				if (receiveMessage(socket, inPacket, received) == sf::Socket::Status::Disconnected) {
 					setStatus(statusText, currentStatus, Status::WAITING);
 					socket.setBlocking(true);
+					std::cout << "Server disconnected" << std::endl;
 					break;
 				}
 				if (received) inPackets.push_back(inPacket);
@@ -138,70 +143,76 @@ int main(){
 			static std::vector<uint8_t> outPacket;
 			const uint8_t* inBuffer = packet.data();
 
-			uint32_t packBitmask = 0;
+			uint32_t packBitmask = BitMask::PING_PONG;
 			uint32_t unpackBitmask = 0;
 			uint32_t packOffset = sizeof(packBitmask);
 			uint32_t unpackOffset = 0;
 
 			unpackData(inBuffer, REFNSIZE(unpackBitmask), unpackOffset);
-			reverseBytes(&unpackBitmask, sizeof(unpackBitmask));
+			reverseBytes(REFNSIZE(unpackBitmask));
 
-			bool ping = false;
+			uint8_t ping = 0;
 			unpackData(inBuffer, REFNSIZE(ping), unpackOffset);
-			if (ping == false){
+			if (ping == 0){
+				std::cout << "Connection reset by server" << std::endl;
 				setStatus(statusText, currentStatus, Status::WAITING);
 				socket.setBlocking(true);
 				break;
 			}
 			packData(outPacket, REFNSIZE(ping), packOffset);
 
-			if (ping) {
-				if (unpackBitmask & BitMask::SYNC) {
-					packBitmask |= BitMask::SYNC;
-					unpackData(inBuffer, REFNSIZE(framerate), unpackOffset);
-					unpackData(inBuffer, REFNSIZE(displayReadSizeX), unpackOffset);
-					unpackData(inBuffer, REFNSIZE(displayReadSizeY), unpackOffset);
+			if (unpackBitmask & BitMask::SYNC) {
+				packBitmask |= BitMask::SYNC;
+				unpackData(inBuffer, REFNSIZE(framerate), unpackOffset);
+				reverseBytes(REFNSIZE(framerate));
+				unpackData(inBuffer, REFNSIZE(displayReadSizeX), unpackOffset);
+				reverseBytes(REFNSIZE(displayReadSizeX));
+				unpackData(inBuffer, REFNSIZE(displayReadSizeY), unpackOffset);
+				reverseBytes(REFNSIZE(displayReadSizeY));
 
-					window.setFramerateLimit(framerate);
-					setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
-					updateBorder(border);
-					updateStatusSprite(statusContainerSprite);
+				window.setFramerateLimit(framerate);
+				setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
+				updateBorder(border);
+				updateStatusSprite(statusContainerSprite);
 
-					bmi.bmiHeader.biWidth = displayReadSizeX;
-					bmi.bmiHeader.biHeight = displayReadSizeY;
+				bmi.bmiHeader.biWidth = displayReadSizeX;
+				bmi.bmiHeader.biHeight = displayReadSizeY;
 
-					delete[] pixels;
-					pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
+				delete[] pixels;
+				pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 
-					bool sync = true;
-					packData(outPacket, REFNSIZE(sync), packOffset);
-					setStatus(statusText, currentStatus, Status::SYNCING);
+				bool sync = true;
+				packData(outPacket, REFNSIZE(sync), packOffset);
+				setStatus(statusText, currentStatus, Status::SYNCING);
+			}
+			if (unpackBitmask & BitMask::CAPTURE) {
+				bool capture = false;
+				unpackData(inBuffer, REFNSIZE(capture), unpackOffset);
+
+				if (capture && currentStatus == Status::READY) {
+					setStatus(statusText, currentStatus, Status::CAPTURING);
 				}
-				if (unpackBitmask & BitMask::CAPTURE) {
-					bool capture = false;
-					unpackData(inBuffer, REFNSIZE(capture), unpackOffset);
 
-					if (capture && currentStatus == Status::READY) {
-						setStatus(statusText, currentStatus, Status::CAPTURING);
+				capture = currentStatus == Status::CAPTURING;
+				packData(outPacket, REFNSIZE(capture), packOffset);
+				if (capture) {
+#ifdef _WIN32
+					BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, SRCCOPY);
+					GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSizeY, &pixels[0], &bmi, DIB_RGB_COLORS);
+#elif __linux__
+					// todo implement
+#endif // _WIN32
+					std::vector<uint8_t> monochromePixels;
+					for (size_t i = 0; i < displayReadSizeX * displayReadSizeY; i++) {
+						const sf::Color& rgbPixel = pixels[i];
+						monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
 					}
-
-					capture = currentStatus == Status::CAPTURING;
-					packData(outPacket, REFNSIZE(capture), packOffset);
-					if (capture) {
-						BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, SRCCOPY);
-						GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSizeY, &pixels[0], &bmi, DIB_RGB_COLORS);
-
-						std::vector<uint8_t> monochromePixels;
-						for (size_t i = 0; i < displayReadSizeX * displayReadSizeY; i++) {
-							const sf::Color& rgbPixel = pixels[i];
-							monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
-						}
-						packData(outPacket, monochromePixels.data(), monochromePixels.size(), packOffset);
-					}
+					packData(outPacket, monochromePixels.data(), monochromePixels.size(), packOffset);
 				}
 			}
 			{
 				uint32_t offset = 0;
+				reverseBytes(REFNSIZE(packBitmask));
 				packData(outPacket, REFNSIZE(packBitmask), offset);
 			}
 			
@@ -215,6 +226,7 @@ int main(){
 			if (connectTimer > 1) {
 				connectTimer = 0;
 				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01)) == sf::Socket::Status::Done){
+					std::cout << "Connected to the server" << std::endl;
 					setStatus(statusText, currentStatus, Status::CONNECTED);
 					socket.setBlocking(false);
 				}
@@ -312,8 +324,8 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 	uint32_t messageSize = 0;
 
 	socket.setBlocking(false);
-	status = socket.receive(&protocolMagic, sizeof(protocolMagic), received);
-	reverseBytes(&protocolMagic, sizeof(protocolMagic));
+	status = socket.receive(REFNSIZE(protocolMagic), received);
+	reverseBytes(REFNSIZE(protocolMagic));
 	if (received == 0 || status != sf::Socket::Status::Done){
 		return status;
 	}
@@ -323,8 +335,8 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 		return status;
 	}
 
-	status = socket.receive(&messageSize, sizeof(messageSize), received);
-	reverseBytes(&messageSize, sizeof(messageSize));
+	status = socket.receive(REFNSIZE(messageSize), received);
+	reverseBytes(REFNSIZE(messageSize));
 	if (received != sizeof(messageSize) || status != sf::Socket::Status::Done) {
 		std::cout << "[WARNING]: Invalid message format" << std::endl;
 		cleanUpSocket(socket);	
@@ -374,7 +386,7 @@ void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 
 	status = socket.send(data, size);
 
-	std::cout << "sended " << size<< " bytes" << std::endl;
+	std::cout << "sent " << size << " bytes" << std::endl;
 	std::cout << "send status " << status << std::endl;
 }
 
