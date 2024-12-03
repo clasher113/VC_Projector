@@ -90,6 +90,7 @@ SYNC.server_routine = function()
 	end
 
 	local out_buffer = data_buffer()
+	out_buffer:put_uint32(0) -- reserve 4 bytes for bitmask
 
 	local bit_mask = BIT_MASK.PING_PONG
 	out_buffer:put_bool(true)
@@ -102,19 +103,18 @@ SYNC.server_routine = function()
 	if (SYNC.is_capturing == true) then
 		bit.band(bit_mask, BIT_MASK.CAPTURE)
 	end
-
-	out_buffer:set_position(0)
-	out_buffer:put_uint32(tonumber(bit_mask, 2))
+	out_buffer:set_position(1)
+	out_buffer:put_uint32(bit_mask)
 
 	SYNC.send(out_buffer)
 end
 
 SYNC.send = function(byte_arr)
-	local buffer = data_buffer()
-	buffer:put_uint32(PROTOCOL_MAGIC)
-	buffer:put_uint32(byte_arr:size())
-	buffer:put_bytes(byte_arr:get_bytes())
-	client:send(buffer:get_bytes())
+	local additional = data_buffer()
+	additional:put_uint32(PROTOCOL_MAGIC)
+	additional:put_uint32(byte_arr:size())
+	client:send(additional:get_bytes())
+	client:send(byte_arr:get_bytes())
 end
 
 SYNC.receive = function()
