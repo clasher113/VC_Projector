@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstring>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
@@ -174,10 +175,10 @@ int main(){
 				setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
 				updateBorder(border);
 				updateStatusSprite(statusContainerSprite);
-
+#ifdef _WIN32
 				bmi.bmiHeader.biWidth = displayReadSizeX;
 				bmi.bmiHeader.biHeight = displayReadSizeY;
-
+#endif // _WIN32
 				delete[] pixels;
 				pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 
