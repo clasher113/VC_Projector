@@ -20,18 +20,21 @@ local projection_offset_z_textbox
 local capture_size_x_textbox
 local capture_size_y_textbox
 
+local default_projection_size_x = "180"
+local default_projection_size_y = "120"
+local default_projection_offset_x = "1"
+local default_projection_offset_y = "0"
+local default_projection_offset_z = "0"
+local default_refresh_rate = 30
+
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
 
 local logs_num = 1
-local on_game_update_added = false
+local single_time_init = false
 
 function on_game_update()
-	if (SYNC.is_syncing == true) then
-
-	else 
-
-	end
+	--sync_button.enabled = SYNC.is_syncing == false
 	for k,v in pairs(SYNC.statuses) do
 		log_message(v)
 		SYNC.statuses[k] = nil
@@ -59,15 +62,29 @@ function on_open()
 	capture_size_x_textbox = document["capture_size_x"]
 	capture_size_y_textbox = document["capture_size_y"]
 
-	if (file.isdir(SYNC.working_directory) == false) then
-		file.mkdir(SYNC.working_directory)
-	end
-
-	if (on_game_update_added == false) then
+	if (single_time_init == false) then
+		single_time_init = true
 		settings_container_1:setInterval(1, on_game_update)
-		on_game_update_added = true
+
+		-- set default values
+		refresh_rate_trackbar.value = default_refresh_rate
+		projection_size_x_textbox.text = default_projection_size_x
+		projection_size_y_textbox.text = default_projection_size_y
+		projection_offset_x_textbox.text = default_projection_offset_x
+		projection_offset_y_textbox.text = default_projection_offset_y
+		projection_offset_z_textbox.text = default_projection_offset_z
+		capture_size_x_textbox.text = projection_size_x_textbox.text
+		capture_size_y_textbox.text = projection_size_y_textbox.text
+		orientation_button.text = "Orientation: " .. orientations[1]
+		axis_button.text = "Axis: " .. axes[1]
 	end
 	set_status("Idle")
+end
+
+function set_gui_enabled(flag)
+	settings_container_1.enabled = flag
+	settings_container_2.enabled = flag
+	sync_button.enabled = flag
 end
 
 function log_message(string)
@@ -87,23 +104,17 @@ function set_status(string)
 end
 
 function main_button_func()
-	if (SYNC.synchronized == true and SYNC.isCapturing == false) then
-		settings_container_1.enabled = false
-		settings_container_2.enabled = false
-		sync_button.enabled = false
-		SYNC.isCapturing = true
+	if (SYNC.is_synchronized == true and SYNC.is_capturing == false) then
+		set_gui_enabled(false)
+		SYNC.is_capturing = true
 		main_button.text = "Stop"
-		SYNC.send("start")
 		log_message("Capturing started")
-	elseif (SYNC.isCapturing  == true) then
-		settings_container_1.enabled = true
-		settings_container_2.enabled = true
-		sync_button.enabled = true
-		SYNC.isCapturing = false
+	elseif (SYNC.is_capturing  == true) then
+		set_gui_enabled(true)
+		SYNC.is_capturing = false
 		main_button.text = "Start"
-		SYNC.send("stop")
 		log_message("Capturing stopped")
-	elseif (SYNC.synchronized == false) then
+	elseif (SYNC.is_synchronized == false) then
 		log_message("You must synchronize first")
 	end
 end
@@ -118,7 +129,11 @@ function init_display()
 end
 
 function synchronize()
-	sync_button.enabled = false
+	if (SYNC.is_connected() == false) then
+		log_message("Not connected")
+		return
+	end
+	--sync_button.enabled = false
 	log_message("Synchronization...")
 	SYNC.is_syncing = true
 	init_display()
@@ -142,7 +157,7 @@ function toggle_orientation()
 	end
 	orientation_button.text = "Orientation: " .. orientations[index]
 	axis_button.visible = (index ~= 2)
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function toggle_axis()
@@ -153,7 +168,7 @@ function toggle_axis()
 		index = 1
 	end
 	axis_button.text = "Axis: " .. axes[index]
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function handle_textbox(string, min, max, textbox_id)
@@ -171,7 +186,7 @@ end
 
 function fps_consumer(string)
 	refresh_rate_label.text = "Projection refresh rate: " .. tostring(refresh_rate_trackbar.value)
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function projection_size_x_consumer(string)
@@ -179,7 +194,7 @@ function projection_size_x_consumer(string)
 		projection_size_x_textbox.text = default_projection_size_x
 	end
 	capture_size_x_textbox.text = projection_size_x_textbox.text
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function projection_size_y_consumer(string)
@@ -187,25 +202,36 @@ function projection_size_y_consumer(string)
 		projection_size_y_textbox.text = default_projection_size_y
 	end
 	capture_size_y_textbox.text = projection_size_y_textbox.text
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function projection_offset_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection offset X") == false) then
 		projection_offset_x_textbox.text = default_projection_offset_x
 	end
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
 end
 
 function projection_offset_y_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Y") == false) then
 		projection_offset_y_textbox.text = default_projection_offset_y
 	end
-	SYNC.synchronized = false
+	SYNC.is_synchronized = false
+end
+
+function projection_offset_z_consumer(string)
+	if (handle_textbox(string, 0, 255, "Projection offset Z") == false) then
+		projection_offset_z_textbox.text = default_projection_offset_z
+	end
+	SYNC.is_synchronized = false
 end
 
 function clear_display()
-	init_display()
-	DISPLAY.clear()
-	log_message("Display cleaned")
+	if (SYNC.is_capturing) then
+		log_message("Does it make sense while the projector is running?")
+	else
+		init_display()
+		DISPLAY.clear()
+		log_message("Display cleaned")
+	end
 end
