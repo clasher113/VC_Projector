@@ -26,7 +26,8 @@ enum BitMask : uint32_t {
 	CAPTURE = 0x4
 };
 
-bool justSyncked = false;
+bool synchonized = false;
+uint32_t lastBitmask = BitMask::NONE;
 uint16_t framerate = 30;
 uint16_t displayReadSizeX = 240;
 uint16_t displayReadSizeY = 120;
@@ -63,8 +64,10 @@ int main(){
 	MARGINS margins{};
 	margins.cxLeftWidth = -1;
 
+	// enable window transparency
 	SetWindowLong(window.getSystemHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
 	DwmExtendFrameIntoClientArea(window.getSystemHandle(), &margins);
+	// make window always on top
 	SetWindowPos(window.getSystemHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	HWND desktop = GetDesktopWindow();
@@ -121,10 +124,6 @@ int main(){
 	while (window.isOpen()) {
 		const float delta = clock.restart().asSeconds();
 
-		if (justSyncked){
-			justSyncked = false;
-			setStatus(statusText, currentStatus, Status::READY);
-		}
 
 		outPackets.clear();
 		if (currentStatus != Status::WAITING){
@@ -182,12 +181,15 @@ int main(){
 				delete[] pixels;
 				pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 
-				bool sync = true;
+				uint8_t sync = 1;
 				packData(outPacket, REFNSIZE(sync), packOffset);
-				setStatus(statusText, currentStatus, Status::SYNCING);
+				//justSyncked = true;
+				setStatus(statusText, currentStatus, Status::READY);
+				synchonized = true;
 			}
 			if (unpackBitmask & BitMask::CAPTURE) {
-				bool capture = false;
+				packBitmask |= BitMask::CAPTURE;
+				uint8_t capture = 0;
 				unpackData(inBuffer, REFNSIZE(capture), unpackOffset);
 
 				if (capture && currentStatus == Status::READY) {
@@ -218,6 +220,13 @@ int main(){
 			}
 			
 			sendMessage(socket, outPacket.data(), packOffset);
+
+			if (lastBitmask != unpackBitmask) {
+				lastBitmask = unpackBitmask;
+				if (synchonized && !(lastBitmask & BitMask::CAPTURE)){
+					setStatus(statusText, currentStatus, Status::READY);
+				}
+			}
 		}
 		inPackets.clear();
 
@@ -228,6 +237,7 @@ int main(){
 				connectTimer = 0;
 				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01)) == sf::Socket::Status::Done){
 					std::cout << "Connected to the server" << std::endl;
+					synchonized = false;
 					setStatus(statusText, currentStatus, Status::CONNECTED);
 					socket.setBlocking(false);
 				}
@@ -368,8 +378,9 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 
 		if (status != sf::Socket::Status::Done) return status;
 	}
+#ifdef _DEBUG
 	std::cout << "received " << received << " bytes" << std::endl;
-
+#endif // _DEBUG
 	return status;
 }
 
@@ -387,8 +398,10 @@ void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 
 	status = socket.send(data, size);
 
+#ifdef _DEBUG
 	std::cout << "sent " << size << " bytes" << std::endl;
 	std::cout << "send status " << status << std::endl;
+#endif // _DEBUG
 }
 
 void unpackData(const void* src, void* dst, uint32_t size, uint32_t& offset) {
