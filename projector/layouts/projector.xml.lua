@@ -9,7 +9,7 @@ local main_button
 local sync_button
 local orientation_button
 local axis_button
-local optimization_checkbox
+local clear_on_stop_checkbox
 local refresh_rate_trackbar
 local refresh_rate_label
 local projection_size_x_textbox
@@ -51,7 +51,7 @@ function on_open()
 	sync_button = document["sync"]
 	orientation_button = document["orientation"]
 	axis_button = document["axis"]
-	optimization_checkbox = document["optimization"]
+	clear_on_stop_checkbox = document["clear_on_stop"]
 	refresh_rate_trackbar = document["refresh_rate"]
 	refresh_rate_label = document["refresh_rate_label"]
 	projection_size_x_textbox = document["projection_size_x"]
@@ -108,15 +108,27 @@ function main_button_func()
 		set_gui_enabled(false)
 		SYNC.is_capturing = true
 		main_button.text = "Stop"
+		init_display()
 		log_message("Capturing started")
 	elseif (SYNC.is_capturing  == true) then
 		set_gui_enabled(true)
 		SYNC.is_capturing = false
 		main_button.text = "Start"
+		if (clear_on_stop_checkbox.checked == true) then
+			DISPLAY.clear()
+		end
 		log_message("Capturing stopped")
 	elseif (SYNC.is_synchronized == false) then
 		log_message("You must synchronize first")
 	end
+end
+
+function get_orientation_index()
+	return index_of(orientations, string.split(orientation_button.text, ": ")[2])
+end
+
+function get_axis_index()
+	return index_of(axes, string.split(axis_button.text, ": ")[2])
 end
 
 function init_display()
@@ -126,6 +138,8 @@ function init_display()
 	DISPLAY.offset_x = tonumber(projection_offset_x_textbox.text)
 	DISPLAY.offset_y = tonumber(projection_offset_y_textbox.text)
 	DISPLAY.offset_z = tonumber(projection_offset_z_textbox.text)
+	DISPLAY.axis = get_axis_index()
+	DISPLAY.orientation = get_orientation_index()
 end
 
 function synchronize()
@@ -149,26 +163,21 @@ function index_of(array, value)
 end
 
 function toggle_orientation()
-	local strings = string.split(orientation_button.text, ": ")
-	local index = index_of(orientations, strings[2])
+	local index = get_orientation_index()
 	index = index + 1
 	if (index > #(orientations)) then 
 		index = 1
 	end
 	orientation_button.text = "Orientation: " .. orientations[index]
-	axis_button.visible = (index ~= 2)
-	SYNC.is_synchronized = false
 end
 
 function toggle_axis()
-	local strings = string.split(axis_button.text, ": ")
-	local index = index_of(axes, strings[2])
+	local index = get_axis_index()
 	index = index + 1
 	if (index > #(axes)) then 
 		index = 1
 	end
 	axis_button.text = "Axis: " .. axes[index]
-	SYNC.is_synchronized = false
 end
 
 function handle_textbox(string, min, max, textbox_id)
@@ -209,21 +218,18 @@ function projection_offset_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection offset X") == false) then
 		projection_offset_x_textbox.text = default_projection_offset_x
 	end
-	SYNC.is_synchronized = false
 end
 
 function projection_offset_y_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Y") == false) then
 		projection_offset_y_textbox.text = default_projection_offset_y
 	end
-	SYNC.is_synchronized = false
 end
 
 function projection_offset_z_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Z") == false) then
 		projection_offset_z_textbox.text = default_projection_offset_z
 	end
-	SYNC.is_synchronized = false
 end
 
 function clear_display()

@@ -93,7 +93,7 @@ SYNC.server_routine = function()
 			local capture_success = buffer:get_bool()
 			if (capture_success == false) then
 				SYNC.statuses.insert("Capture error")
-			else
+			elseif (SYNC.is_capturing == true) then
 				local pixels = buffer:get_bytes(DISPLAY.resolution_x * DISPLAY.resolution_y)
 				DISPLAY.update(pixels)
 			end

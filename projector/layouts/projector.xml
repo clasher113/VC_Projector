@@ -16,7 +16,7 @@
     <container color="#00000099" id="settings_2" scrollable="0" size="250,200" pos="280,30">
         <label id="refresh_rate_label" pos="10,10">Projection refresh rate: 30</label>
         <trackbar id="refresh_rate" min="1" pos="10,30" consumer="fps_consumer" max="60" value="30" size="230,30"/>
-        <checkbox size="200,30" pos="10,70" id="optimization">Idle optimization</checkbox>
+        <checkbox size="200,30" pos="10,70" id="clear_on_stop" checked="true">Clear on stop</checkbox>
         <button onclick="toggle_axis()" id="axis" size="230,30" pos="10,150">Axis: X</button>
         <button onclick="toggle_orientation()" id="orientation" size="230,30" pos="10,110">Orientation: Vertical</button>
     </container>
