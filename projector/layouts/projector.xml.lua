@@ -29,6 +29,7 @@ local default_refresh_rate = 30
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
+local config_file = pack.shared_file("projector", "config")
 
 local logs_num = 1
 local single_time_init = false
@@ -52,29 +53,42 @@ function on_game_update()
 end
 
 function on_open()
-	-- retreive elements
-	logs_panel = document["logs"]
-	status_label = document["status"]
-	settings_container_1 = document["settings_1"]
-	settings_container_2 = document["settings_2"]
-	main_button = document["main_button"]
-	sync_button = document["sync"]
-	orientation_button = document["orientation"]
-	axis_button = document["axis"]
-	clear_on_stop_checkbox = document["clear_on_stop"]
-	refresh_rate_trackbar = document["refresh_rate"]
-	refresh_rate_label = document["refresh_rate_label"]
-	projection_size_x_textbox = document["projection_size_x"]
-	projection_size_y_textbox = document["projection_size_y"]
-	projection_offset_x_textbox = document["projection_offset_x"]
-	projection_offset_y_textbox = document["projection_offset_y"]
-	projection_offset_z_textbox = document["projection_offset_z"]
-	capture_size_x_textbox = document["capture_size_x"]
-	capture_size_y_textbox = document["capture_size_y"]
-
 	if (single_time_init == false) then
+
+		-- retreive elements
+		logs_panel = document["logs"]
+		status_label = document["status"]
+		settings_container_1 = document["settings_1"]
+		settings_container_2 = document["settings_2"]
+		main_button = document["main_button"]
+		sync_button = document["sync"]
+		orientation_button = document["orientation"]
+		axis_button = document["axis"]
+		clear_on_stop_checkbox = document["clear_on_stop"]
+		refresh_rate_trackbar = document["refresh_rate"]
+		refresh_rate_label = document["refresh_rate_label"]
+		projection_size_x_textbox = document["projection_size_x"]
+		projection_size_y_textbox = document["projection_size_y"]
+		projection_offset_x_textbox = document["projection_offset_x"]
+		projection_offset_y_textbox = document["projection_offset_y"]
+		projection_offset_z_textbox = document["projection_offset_z"]
+		capture_size_x_textbox = document["capture_size_x"]
+		capture_size_y_textbox = document["capture_size_y"]
+
 		single_time_init = true
 		settings_container_1:setInterval(1, on_game_update)
+
+		if (file.isfile(config_file) == true) then
+			default_refresh_rate = DISPLAY.refresh_rate
+			default_projection_size_x = DISPLAY.resolution_x
+			default_projection_size_y = DISPLAY.resolution_y
+			default_projection_offset_x = DISPLAY.offset_x
+			default_projection_offset_y = DISPLAY.offset_y
+			default_projection_offset_z = DISPLAY.offset_z
+		else
+			init_display()
+			DISPLAY.save_config()
+		end
 
 		-- set default values
 		refresh_rate_trackbar.value = default_refresh_rate
@@ -85,8 +99,9 @@ function on_open()
 		projection_offset_z_textbox.text = default_projection_offset_z
 		capture_size_x_textbox.text = projection_size_x_textbox.text
 		capture_size_y_textbox.text = projection_size_y_textbox.text
-		orientation_button.text = "Orientation: " .. orientations[1]
-		axis_button.text = "Axis: " .. axes[1]
+		orientation_button.text = "Orientation: " .. orientations[DISPLAY.orientation]
+		axis_button.text = "Axis: " .. axes[DISPLAY.axis]
+		fps_consumer("")
 	end
 end
 
@@ -155,7 +170,6 @@ function synchronize()
 		log_message("Not connected")
 		return
 	end
-	--sync_button.enabled = false
 	log_message("Synchronization...")
 	SYNC.is_syncing = true
 	init_display()
@@ -241,7 +255,7 @@ function projection_offset_z_consumer(string)
 end
 
 function clear_display()
-	if (SYNC.is_capturing) then
+	if (SYNC.is_capturing == true) then
 		log_message("Does it make sense while the projector is running?")
 	else
 		init_display()

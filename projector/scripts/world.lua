@@ -3,9 +3,10 @@ require "projector:display"
 
 function on_world_open()
 	SYNC.start_server()
-	DISPLAY.init()
+	DISPLAY.initialize()
 end
 
 function on_world_save()
 	SYNC.close_server()
+	DISPLAY.save_config()
 end

@@ -12,15 +12,40 @@ DISPLAY.position_y = 0
 DISPLAY.position_z = 0
 DISPLAY.orientation = 0
 DISPLAY.axis = 0
-DISPLAY.orientation = 0
 
 local blocks_indices = {}
+local config_file = pack.shared_file("projector", "config")
 
-DISPLAY.init = function ()
+DISPLAY.initialize = function ()
+	if (file.isfile(config_file) == true) then
+		local temp = bjson.frombytes(file.read_bytes(config_file))
+		DISPLAY.resolution_x = temp.resolution_x
+		DISPLAY.resolution_y = temp.resolution_y
+		DISPLAY.offset_x = temp.offset_x
+		DISPLAY.offset_y = temp.offset_y
+		DISPLAY.offset_z = temp.offset_z
+		DISPLAY.refresh_rate = temp.refresh_rate
+		DISPLAY.orientation = temp.orientation
+		DISPLAY.axis = temp.axis
+	end
 	for i=0, 15 do
 		blocks_indices[i] = block.index("projector:black" .. tostring(i))
 	end
 	blocks_indices[16] = block.index("core:air")
+end
+
+DISPLAY.save_config = function ()
+	local temp = {}
+	temp.resolution_x = DISPLAY.resolution_x
+	temp.resolution_y = DISPLAY.resolution_y
+	temp.offset_x = DISPLAY.offset_x
+	temp.offset_y = DISPLAY.offset_y
+	temp.offset_z = DISPLAY.offset_z
+	temp.refresh_rate = DISPLAY.refresh_rate
+	temp.orientation = DISPLAY.orientation
+	temp.axis = DISPLAY.axis
+
+	file.write_bytes(config_file, bjson.tobytes(temp))
 end
 
 DISPLAY.update = function (pixels)
@@ -38,7 +63,7 @@ DISPLAY.update = function (pixels)
 
 		if (DISPLAY.axis == 1) then	-- x-axis
 			for y=y_start, y_end, 1 do 
-				for x=x_start, x_end, 1 do 
+				for x=x_start, x_end, 1 do
 					block.set(x, y, z_start, blocks_indices[pixels[i]], 0)
 					i = i + 1
 				end
