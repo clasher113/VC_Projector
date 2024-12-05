@@ -132,6 +132,15 @@ SYNC.send = function(byte_arr)
 	--print("sent " .. tostring(byte_arr:size()) .. " bytes")
 end
 
+function cleanup_socket()
+	while (true) do
+		local temp = client:recv(1024, false)
+		if (temp == nil or #temp == 0) then
+			return
+		end
+	end
+end
+
 SYNC.receive = function()
 	local data = client:recv(4, false)
 	if (data == nil or #data == 0) then
@@ -140,16 +149,19 @@ SYNC.receive = function()
 	local protocol_magic = bit_converter.bytes_to_uint32(data)
 	if (data == nil or #data == 0 or protocol_magic ~= PROTOCOL_MAGIC) then
 		print("[WARNING]: No protocol magic or invalid protocol detected (" .. tostring(protocol_magic) ..")")
+		cleanup_socket()
 		return nil
 	end
 	data = client:recv(4, false)
 	if (data == nil or #data ~= 4) then
 		print("[WARNING]: Invalid message format");
+		cleanup_socket()
 		return nil
 	end
 	local message_size = bit_converter.bytes_to_uint32(data)
 	if (message_size == 0 or message_size >= MAX_RECEIVE_SIZE) then
 		print("[WARNING]: Invalid message size (" .. tostring(message_size) ..")")
+		cleanup_socket()
 		return nil
 	end
 
@@ -160,6 +172,7 @@ SYNC.receive = function()
 			return nil
 		elseif (#sub_buffer == 0) then
 			print("[WARNING]: Read buffer empty")
+			cleanup_socket()
 			return nil
 		end
 

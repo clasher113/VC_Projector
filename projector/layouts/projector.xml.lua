@@ -34,7 +34,17 @@ local logs_num = 1
 local single_time_init = false
 
 function on_game_update()
-	--sync_button.enabled = SYNC.is_syncing == false
+	if (SYNC.is_connected()) then
+		if (SYNC.is_capturing) then
+			set_status("Projecting")
+		elseif (SYNC.is_synchronized) then
+			set_status("Ready")
+		else
+			set_status("Connected")
+		end
+	else
+		set_status("Waiting for connection")
+	end
 	for k,v in pairs(SYNC.statuses) do
 		log_message(v)
 		SYNC.statuses[k] = nil
@@ -78,7 +88,6 @@ function on_open()
 		orientation_button.text = "Orientation: " .. orientations[1]
 		axis_button.text = "Axis: " .. axes[1]
 	end
-	set_status("Idle")
 end
 
 function set_gui_enabled(flag)
@@ -91,7 +100,6 @@ function log_message(string)
 	local size = logs_panel.size
 	local color = (logs_num % 2 == 0 and "#ffffff10" or "#ffffff00")
 	logs_panel:add("<textbox id='log" .. tostring(logs_num) .. "' color='" .. color .. "' editable='false' multiline='true' text-wrap='true' autoresize='true'>" .. string .. "</textbox>")
-	local current_elem = logs_num
 	for i=logs_num,1,-1 do 
 		document["log" .. tostring(i)]:moveInto(logs_panel)
 	end
