@@ -1,3 +1,4 @@
 {
-  "texture": "black5"
+  "texture": "black5",
+  "parent": "projector:black_base"
 }
