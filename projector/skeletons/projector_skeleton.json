@@ -1,0 +1,20 @@
+{
+  "root": {
+    "model": "tripod",
+    "offset": [ 0, -0.5, 0 ],
+    "nodes": [
+      {
+        "offset": [ 0, 0.45, 0 ],
+        "model": "projector"
+      },
+      {
+        "offset": [ 0, 0.85, -0.14 ],
+        "model": "film_cassette"
+      },
+      {
+        "offset": [ 0, 0.85, 0.14 ],
+        "model": "film_cassette"
+      }
+    ]
+  }
+} 

@@ -16,8 +16,13 @@
     "black7",
     "black8",
     "black9",
-    "projector"
+    "projector",
+    "black_base"
   ],
-  "items": [],
-  "entities": []
+  "items": [
+    "projector.item"
+  ],
+  "entities": [
+    "projector_entity"
+  ]
 }

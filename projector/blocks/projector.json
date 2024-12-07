@@ -1,1 +1,7 @@
-{}
+{
+  "model": "aabb",
+  "light-passing": true,
+  "sky-light-passing": true,
+  "texture": "transparent",
+  "hitbox": [ 0.23, 0.0, 0.09, 0.53, 0.97, 0.7 ]
+}
