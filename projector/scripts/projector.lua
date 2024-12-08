@@ -1,7 +1,9 @@
 require "projector:display"
 require "projector:synchronizer"
+require "projector:instance_limit"
 
 function on_interact(x, y, z, pid)
+    LIMIT.set_position({x, y, z})
     hud.show_overlay("projector:projector")
     DISPLAY.position_x = x
     DISPLAY.position_y = y
@@ -10,6 +12,7 @@ function on_interact(x, y, z, pid)
 end
 
 function on_placed(x, y, z, playerid)
+    LIMIT.set_position({x, y, z})
     entities.spawn("projector:projector_entity", {math.floor(x) + 0.5, y + 0.5, math.floor(z) + 0.5})
 end
 
@@ -28,4 +31,5 @@ function on_broken(x, y, z, playerid)
             entity:despawn()
         end
     end
+    LIMIT.remove()
 end

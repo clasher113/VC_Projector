@@ -21,15 +21,15 @@ BIT_MASK.CAPTURE = 0x4
 
 SYNC.start_server = function()
 	server = network.tcp_open(6969, function (socket)
-			print("user connected")
+			debug.log("user connected")
 			client = socket
 		end
 	)
 	if (server:is_open()) then
-		print("Projector server started")
+		debug.log("Projector server started")
 		return true
 	else
-		print("Failed to start projector server")
+		debug.log("Failed to start projector server")
 		return false
 	end
 end
@@ -39,7 +39,7 @@ SYNC.close_server = function()
 		if (client ~= nil and client:is_alive() == true) then
 			client:close()
 		end
-		print("Projector server stopped")	
+		debug.log("Projector server stopped")	
 		server:close()
 	end
 end
@@ -58,7 +58,7 @@ SYNC.server_routine = function()
 	if (client == nil) then
 		return
 	elseif (client:is_connected() == false) then
-		print("client disconnect")
+		debug.log("client disconnect")
 		client = nil
 		return
 	end
@@ -129,7 +129,7 @@ SYNC.send = function(byte_arr)
 	client:send(additional:get_bytes())
 	client:send(byte_arr:get_bytes())
 
-	--print("sent " .. tostring(byte_arr:size()) .. " bytes")
+	--debug.log("sent " .. tostring(byte_arr:size()) .. " bytes")
 end
 
 function cleanup_socket()
@@ -148,19 +148,19 @@ SYNC.receive = function()
 	end
 	local protocol_magic = bit_converter.bytes_to_uint32(data)
 	if (data == nil or #data == 0 or protocol_magic ~= PROTOCOL_MAGIC) then
-		print("[WARNING]: No protocol magic or invalid protocol detected (" .. tostring(protocol_magic) ..")")
+		debug.log("[WARNING]: No protocol magic or invalid protocol detected (" .. tostring(protocol_magic) ..")")
 		cleanup_socket()
 		return nil
 	end
 	data = client:recv(4, false)
 	if (data == nil or #data ~= 4) then
-		print("[WARNING]: Invalid message format");
+		debug.log("[WARNING]: Invalid message format");
 		cleanup_socket()
 		return nil
 	end
 	local message_size = bit_converter.bytes_to_uint32(data)
 	if (message_size == 0 or message_size >= MAX_RECEIVE_SIZE) then
-		print("[WARNING]: Invalid message size (" .. tostring(message_size) ..")")
+		debug.log("[WARNING]: Invalid message size (" .. tostring(message_size) ..")")
 		cleanup_socket()
 		return nil
 	end
@@ -171,7 +171,7 @@ SYNC.receive = function()
 		if (sub_buffer == nil) then
 			return nil
 		elseif (#sub_buffer == 0) then
-			print("[WARNING]: Read buffer empty")
+			debug.log("[WARNING]: Read buffer empty")
 			cleanup_socket()
 			return nil
 		end
@@ -180,7 +180,7 @@ SYNC.receive = function()
 		out_data:put_bytes(sub_buffer)
 	end
 
-	--print("received " .. tostring(out_data:size()) .. " bytes")
+	--debug.log("received " .. tostring(out_data:size()) .. " bytes")
 	out_data:set_position(1)
 	return out_data	
 end
