@@ -22,8 +22,13 @@ BIT_MASK.CAPTURE = 0x4
 
 SYNC.start_server = function()
 	server = network.tcp_open(6969, function (socket)
-			debug.log("user connected")
-			client = socket
+			if (client == nil) then
+				debug.log("user connected")
+				client = socket
+			else
+				socket:close()
+				debug.log("closed extra connection")
+			end
 		end
 	)
 	if (server:is_open()) then
