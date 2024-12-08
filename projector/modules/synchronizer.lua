@@ -12,6 +12,7 @@ local server
 local client
 local PROTOCOL_MAGIC = 0xAAFFFAA
 local MAX_RECEIVE_SIZE = 1024 * 1024
+local byte_order = "BE"
 
 local BIT_MASK = {}
 BIT_MASK.NONE = 0x0
@@ -101,7 +102,7 @@ SYNC.server_routine = function()
 	end
 
 	local out_buffer = data_buffer()
-	out_buffer:put_uint32(0) -- reserve 4 bytes for bitmask
+	out_buffer:set_order(byte_order)
 
 	local bit_mask = BIT_MASK.PING_PONG
 	out_buffer:put_bool(true)
@@ -124,6 +125,7 @@ end
 
 SYNC.send = function(byte_arr)
 	local additional = data_buffer()
+	additional:set_order(byte_order)
 	additional:put_uint32(PROTOCOL_MAGIC)
 	additional:put_uint32(byte_arr:size())
 	client:send(additional:get_bytes())
@@ -146,7 +148,7 @@ SYNC.receive = function()
 	if (data == nil or #data == 0) then
 		return nil
 	end
-	local protocol_magic = bit_converter.bytes_to_uint32(data)
+	local protocol_magic = bit_converter.bytes_to_uint32(data, byte_order)
 	if (data == nil or #data == 0 or protocol_magic ~= PROTOCOL_MAGIC) then
 		debug.log("[WARNING]: No protocol magic or invalid protocol detected (" .. tostring(protocol_magic) ..")")
 		cleanup_socket()
@@ -158,7 +160,7 @@ SYNC.receive = function()
 		cleanup_socket()
 		return nil
 	end
-	local message_size = bit_converter.bytes_to_uint32(data)
+	local message_size = bit_converter.bytes_to_uint32(data, byte_order)
 	if (message_size == 0 or message_size >= MAX_RECEIVE_SIZE) then
 		debug.log("[WARNING]: Invalid message size (" .. tostring(message_size) ..")")
 		cleanup_socket()
@@ -166,6 +168,7 @@ SYNC.receive = function()
 	end
 
 	local out_data = data_buffer()
+	out_data:set_order(byte_order)
 	while (message_size > 0) do
 		local sub_buffer = client:recv(message_size, false)
 		if (sub_buffer == nil) then
