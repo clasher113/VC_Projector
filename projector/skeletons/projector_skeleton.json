@@ -5,15 +5,20 @@
     "nodes": [
       {
         "offset": [ 0, 0.45, 0 ],
-        "model": "projector"
-      },
-      {
-        "offset": [ 0, 0.85, -0.14 ],
-        "model": "film_cassette"
-      },
-      {
-        "offset": [ 0, 0.85, 0.14 ],
-        "model": "film_cassette"
+        "name": "projector",
+        "model": "projector",
+        "nodes": [
+          {
+            "offset": [ 0, 0.4, -0.14 ],
+            "name": "disk_1",
+            "model": "film_cassette"
+          },
+          {
+            "offset": [ 0, 0.4, 0.14 ],
+            "name": "disk_2",
+            "model": "film_cassette"
+          }
+        ]
       }
     ]
   }
