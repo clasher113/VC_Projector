@@ -50,7 +50,6 @@ static void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size);
 
 #define REFNSIZE(VALUE) &VALUE, sizeof(VALUE)
 
-static void reverseBytes(void* start, size_t size);
 static void unpackData(const void* src, void* dst, uint32_t size, uint32_t& offset);
 static void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_t& offset);
 
@@ -149,7 +148,6 @@ int main(){
 			uint32_t unpackOffset = 0;
 
 			unpackData(inBuffer, REFNSIZE(unpackBitmask), unpackOffset);
-			reverseBytes(REFNSIZE(unpackBitmask));
 
 			uint8_t ping = 0;
 			unpackData(inBuffer, REFNSIZE(ping), unpackOffset);
@@ -164,11 +162,8 @@ int main(){
 			if (unpackBitmask & BitMask::SYNC) {
 				packBitmask |= BitMask::SYNC;
 				unpackData(inBuffer, REFNSIZE(framerate), unpackOffset);
-				reverseBytes(REFNSIZE(framerate));
 				unpackData(inBuffer, REFNSIZE(displayReadSizeX), unpackOffset);
-				reverseBytes(REFNSIZE(displayReadSizeX));
 				unpackData(inBuffer, REFNSIZE(displayReadSizeY), unpackOffset);
-				reverseBytes(REFNSIZE(displayReadSizeY));
 
 				window.setFramerateLimit(framerate);
 				setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
@@ -215,7 +210,6 @@ int main(){
 			}
 			{
 				uint32_t offset = 0;
-				reverseBytes(REFNSIZE(packBitmask));
 				packData(outPacket, REFNSIZE(packBitmask), offset);
 			}
 			
@@ -323,12 +317,6 @@ static void cleanUpSocket(sf::TcpSocket& socket) {
 
 }
 
-static void reverseBytes(void* start, size_t size) {
-	uint8_t* istart = static_cast<uint8_t*>(start);
-	uint8_t* iend = istart + size;
-	std::reverse(istart, iend);
-}
-
 sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& buffer, size_t& received) {
 	sf::Socket::Status status = sf::Socket::Status::Disconnected;
 	uint32_t protocolMagic = 0;
@@ -336,7 +324,6 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 
 	socket.setBlocking(false);
 	status = socket.receive(REFNSIZE(protocolMagic), received);
-	reverseBytes(REFNSIZE(protocolMagic));
 	if (received == 0 || status != sf::Socket::Status::Done){
 		return status;
 	}
@@ -347,7 +334,6 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 	}
 
 	status = socket.receive(REFNSIZE(messageSize), received);
-	reverseBytes(REFNSIZE(messageSize));
 	if (received != sizeof(messageSize) || status != sf::Socket::Status::Done) {
 		std::cout << "[WARNING]: Invalid message format" << std::endl;
 		cleanUpSocket(socket);	
@@ -390,10 +376,8 @@ void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 	uint32_t offset = 0;
 	std::vector<uint8_t> additional(sizeof(PROTOCOL_MAGIC) + sizeof(size));
 	packData(additional, REFNSIZE(PROTOCOL_MAGIC), offset);
-	reverseBytes(additional.data(), sizeof(PROTOCOL_MAGIC));
 
 	packData(additional, REFNSIZE(size), offset);
-	reverseBytes(additional.data() + sizeof(PROTOCOL_MAGIC), sizeof(size));
 	sf::Socket::Status status = socket.send(additional.data(), offset);
 
 	status = socket.send(data, size);
