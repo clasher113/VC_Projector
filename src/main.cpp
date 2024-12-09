@@ -29,9 +29,10 @@ enum BitMask : uint32_t {
 bool synchonized = false;
 uint32_t lastBitmask = BitMask::NONE;
 uint16_t framerate = 30;
-uint16_t displayReadSizeX = 240;
-uint16_t displayReadSizeY = 120;
-sf::Vector2u displayReadPos(240, 240);
+uint16_t displayResolutionX = 240;
+uint16_t displayResolutionY = 120;
+uint16_t displayReadSizeX = displayResolutionX;
+uint16_t displayReadSizeY = displayResolutionY;
 
 const sf::Vector2u statusContainerSize(200, 30);
 const char* REMOTE_ADDRESS = "127.0.0.1";
@@ -73,7 +74,6 @@ int main(){
 	HDC desktopHdc = GetDC(desktop);
 	HDC hCaptureDC = CreateCompatibleDC(desktopHdc);
 	HBITMAP hCaptureBitmap = CreateCompatibleBitmap(desktopHdc, displayReadSizeX, displayReadSizeY);
-	auto const oldBmp = SelectObject(hCaptureDC, hCaptureBitmap);
 	SelectObject(hCaptureDC, hCaptureBitmap);
 
 	BITMAPINFO bmi{};
@@ -162,6 +162,8 @@ int main(){
 			if (unpackBitmask & BitMask::SYNC) {
 				packBitmask |= BitMask::SYNC;
 				unpackData(inBuffer, REFNSIZE(framerate), unpackOffset);
+				unpackData(inBuffer, REFNSIZE(displayResolutionX), unpackOffset);
+				unpackData(inBuffer, REFNSIZE(displayResolutionY), unpackOffset);
 				unpackData(inBuffer, REFNSIZE(displayReadSizeX), unpackOffset);
 				unpackData(inBuffer, REFNSIZE(displayReadSizeY), unpackOffset);
 
@@ -172,6 +174,9 @@ int main(){
 #ifdef _WIN32
 				bmi.bmiHeader.biWidth = displayReadSizeX;
 				bmi.bmiHeader.biHeight = displayReadSizeY;
+
+				hCaptureBitmap = CreateCompatibleBitmap(desktopHdc, displayReadSizeX, displayReadSizeY);
+				SelectObject(hCaptureDC, hCaptureBitmap);
 #endif // _WIN32
 				delete[] pixels;
 				pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
@@ -201,10 +206,20 @@ int main(){
 					// todo implement
 #endif // _WIN32
 					std::vector<uint8_t> monochromePixels;
-					for (size_t i = 0; i < displayReadSizeX * displayReadSizeY; i++) {
-						const sf::Color& rgbPixel = pixels[i];
-						monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
+					monochromePixels.reserve(displayResolutionX * displayResolutionY);
+
+					const float scale_x = static_cast<float>(displayReadSizeX) / displayResolutionX;
+					const float scale_y = static_cast<float>(displayReadSizeY) / displayResolutionY;
+
+					for (size_t x = 0; x < displayResolutionX; x++) {
+						for (size_t y = 0; y < displayResolutionY; y++) {
+							const size_t read_x = x * scale_x;
+							const size_t read_y = y * scale_y;
+							const sf::Color& rgbPixel = pixels[read_y * displayReadSizeX + read_x];
+							monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
+						}
 					}
+
 					packData(outPacket, monochromePixels.data(), monochromePixels.size(), packOffset);
 				}
 			}
@@ -376,10 +391,9 @@ void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 	uint32_t offset = 0;
 	std::vector<uint8_t> additional(sizeof(PROTOCOL_MAGIC) + sizeof(size));
 	packData(additional, REFNSIZE(PROTOCOL_MAGIC), offset);
-
 	packData(additional, REFNSIZE(size), offset);
-	sf::Socket::Status status = socket.send(additional.data(), offset);
 
+	sf::Socket::Status status = socket.send(additional.data(), offset);
 	status = socket.send(data, size);
 
 #ifdef _DEBUG
