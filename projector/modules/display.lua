@@ -21,6 +21,8 @@ DISPLAY.initialize = function ()
 		local temp = bjson.frombytes(file.read_bytes(config_file))
 		DISPLAY.resolution_x = temp.resolution_x
 		DISPLAY.resolution_y = temp.resolution_y
+		SYNC.capture_size_x = temp.capture_x
+		SYNC.capture_size_y = temp.capture_y
 		DISPLAY.offset_x = temp.offset_x
 		DISPLAY.offset_y = temp.offset_y
 		DISPLAY.offset_z = temp.offset_z
@@ -38,6 +40,8 @@ DISPLAY.save_config = function ()
 	local temp = {}
 	temp.resolution_x = DISPLAY.resolution_x
 	temp.resolution_y = DISPLAY.resolution_y
+	temp.capture_x = SYNC.capture_size_x
+	temp.capture_y = SYNC.capture_size_y
 	temp.offset_x = DISPLAY.offset_x
 	temp.offset_y = DISPLAY.offset_y
 	temp.offset_z = DISPLAY.offset_z
@@ -62,15 +66,15 @@ DISPLAY.update = function (pixels)
 	if (DISPLAY.orientation == 1) then -- vertical
 
 		if (DISPLAY.axis == 1) then	-- x-axis
-			for y=y_start, y_end, 1 do 
-				for x=x_start, x_end, 1 do
+			for x=x_start, x_end, 1 do
+				for y=y_start, y_end, 1 do 
 					block.set(x, y, z_start, blocks_indices[pixels[i]], 0)
 					i = i + 1
 				end
 			end
 		elseif (DISPLAY.axis == 2) then -- z-axis
-			for y=y_start, y_end, 1 do 
-				for z=z_start, z_end, 1 do 
+			for z=z_start, z_end, 1 do 
+				for y=y_start, y_end, 1 do 
 					block.set(x_start, y, z, blocks_indices[pixels[i]], 0)
 					i = i + 1
 				end
@@ -81,16 +85,16 @@ DISPLAY.update = function (pixels)
 	
 		if (DISPLAY.axis == 1) then	-- x-axis
 			z_end = z_start + DISPLAY.resolution_y - 1
-			for z=z_end, z_start, -1 do 
-				for x=x_start, x_end, 1 do 
+			for x=x_start, x_end, 1 do 
+				for z=z_end, z_start, -1 do 
 					block.set(x, y_start, z, blocks_indices[pixels[i]], 0)
 					i = i + 1
 				end
 			end
 		elseif (DISPLAY.axis == 2) then -- z-axis
 			x_end = x_start + DISPLAY.resolution_y - 1
-			for x=x_start, x_end, 1 do 
-				for z=z_start, z_end, 1 do 
+			for z=z_start, z_end, 1 do 
+				for x=x_start, x_end, 1 do 
 					block.set(x, y_start, z, blocks_indices[pixels[i]], 0)
 					i = i + 1
 				end

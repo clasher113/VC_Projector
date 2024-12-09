@@ -5,7 +5,10 @@ SYNC = {}
 SYNC.is_syncing = false
 SYNC.is_capturing = false
 SYNC.is_synchronized = false
+SYNC.capture_size_x = 0
+SYNC.capture_size_y = 0
 SYNC.statuses = {}
+SYNC.on_disconnect_callback = nil
 
 local refresh_timer = 0.0
 local server
@@ -51,7 +54,6 @@ SYNC.close_server = function()
 end
 
 SYNC.server_routine = function()
-	
 	refresh_timer = refresh_timer + time.delta()
 	local refresh_interval = 1.0 / DISPLAY.refresh_rate
 	if (refresh_timer < refresh_interval) then
@@ -65,6 +67,10 @@ SYNC.server_routine = function()
 		return
 	elseif (client:is_connected() == false) then
 		debug.log("client disconnect")
+		SYNC.on_disconnect_callback()
+		SYNC.is_syncing = false
+		SYNC.is_capturing = false
+		SYNC.is_synchronized = false
 		client = nil
 		return
 	end
@@ -98,7 +104,7 @@ SYNC.server_routine = function()
 		if (bit.band(bit_mask, BIT_MASK.CAPTURE) > 0) then
 			local capture_success = buffer:get_bool()
 			if (capture_success == false) then
-				SYNC.statuses.insert("Capture error")
+				table.insert(SYNC.statuses, "Capture error")
 			elseif (SYNC.is_capturing == true) then
 				local pixels = buffer:get_bytes(DISPLAY.resolution_x * DISPLAY.resolution_y)
 				DISPLAY.update(pixels)
@@ -116,6 +122,8 @@ SYNC.server_routine = function()
 		out_buffer:put_uint16(DISPLAY.refresh_rate)
 		out_buffer:put_uint16(DISPLAY.resolution_x)
 		out_buffer:put_uint16(DISPLAY.resolution_y)
+		out_buffer:put_uint16(SYNC.capture_size_x)
+		out_buffer:put_uint16(SYNC.capture_size_y)
 		SYNC.is_syncing = false
 	end
 	if (SYNC.is_capturing == true) then

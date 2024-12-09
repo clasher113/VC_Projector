@@ -22,6 +22,8 @@ local capture_size_y_textbox
 
 local default_projection_size_x = "180"
 local default_projection_size_y = "120"
+local default_capture_size_x = default_projection_size_x
+local default_capture_size_y = default_projection_size_y
 local default_projection_offset_x = "1"
 local default_projection_offset_y = "0"
 local default_projection_offset_z = "0"
@@ -82,6 +84,8 @@ function on_open()
 			default_refresh_rate = DISPLAY.refresh_rate
 			default_projection_size_x = DISPLAY.resolution_x
 			default_projection_size_y = DISPLAY.resolution_y
+			default_capture_size_x = SYNC.capture_size_x
+			default_capture_size_y = SYNC.capture_size_y
 			default_projection_offset_x = DISPLAY.offset_x
 			default_projection_offset_y = DISPLAY.offset_y
 			default_projection_offset_z = DISPLAY.offset_z
@@ -102,6 +106,12 @@ function on_open()
 		orientation_button.text = "Orientation: " .. orientations[DISPLAY.orientation]
 		axis_button.text = "Axis: " .. axes[DISPLAY.axis]
 		fps_consumer("")
+
+		SYNC.on_disconnect_callback = function()
+			if (SYNC.is_capturing == true) then
+				stop()
+			end
+		end
 	end
 end
 
@@ -126,21 +136,29 @@ function set_status(string)
 	status_label.text = "Status: " .. string
 end
 
+function stop()
+	set_gui_enabled(true)
+	SYNC.is_capturing = false
+	main_button.text = "Start"
+	if (clear_on_stop_checkbox.checked == true) then
+		DISPLAY.clear()
+	end
+	log_message("Capturing stopped")
+end
+
+function start()
+	set_gui_enabled(false)
+	SYNC.is_capturing = true
+	main_button.text = "Stop"
+	init_display()
+	log_message("Capturing started")
+end
+
 function main_button_func()
 	if (SYNC.is_synchronized == true and SYNC.is_capturing == false) then
-		set_gui_enabled(false)
-		SYNC.is_capturing = true
-		main_button.text = "Stop"
-		init_display()
-		log_message("Capturing started")
+		start()
 	elseif (SYNC.is_capturing  == true) then
-		set_gui_enabled(true)
-		SYNC.is_capturing = false
-		main_button.text = "Start"
-		if (clear_on_stop_checkbox.checked == true) then
-			DISPLAY.clear()
-		end
-		log_message("Capturing stopped")
+		stop()
 	elseif (SYNC.is_synchronized == false) then
 		log_message("You must synchronize first")
 	end
@@ -158,6 +176,8 @@ function init_display()
 	DISPLAY.refresh_rate = refresh_rate_trackbar.value
 	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
 	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
+	SYNC.capture_size_x = tonumber(capture_size_x_textbox.text)
+	SYNC.capture_size_y = tonumber(capture_size_y_textbox.text)
 	DISPLAY.offset_x = tonumber(projection_offset_x_textbox.text)
 	DISPLAY.offset_y = tonumber(projection_offset_y_textbox.text)
 	DISPLAY.offset_z = tonumber(projection_offset_z_textbox.text)
@@ -224,15 +244,27 @@ function projection_size_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
 		projection_size_x_textbox.text = default_projection_size_x
 	end
-	capture_size_x_textbox.text = projection_size_x_textbox.text
 	SYNC.is_synchronized = false
 end
 
 function projection_size_y_consumer(string)
-	if (handle_textbox(string, 1, 255, "Projection size Y") == false) then
+	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
 		projection_size_y_textbox.text = default_projection_size_y
 	end
-	capture_size_y_textbox.text = projection_size_y_textbox.text
+	SYNC.is_synchronized = false
+end
+
+function capture_size_x_consumer(string)
+	if (handle_textbox(string, 1, 1920, "Capture size X") == false) then
+		capture_size_x_textbox.text = default_capture_size_x
+	end
+	SYNC.is_synchronized = false
+end
+
+function capture_size_y_consumer(string)
+	if (handle_textbox(string, 1, 1080, "Capture size Y") == false) then
+		capture_size_y_textbox.text = default_capture_size_y
+	end
 	SYNC.is_synchronized = false
 end
 

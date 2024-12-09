@@ -9,8 +9,8 @@
         <textbox consumer="projection_offset_x_consumer" pos="10,90" placeholder="Offset X" id="projection_offset_x" size="70,30"></textbox>
         <textbox id="projection_offset_y" pos="90,90" consumer="projection_offset_y_consumer" placeholder="Offset Y" size="70,30"></textbox>
         <label pos="10,130">Capture size in pixels:</label>
-        <textbox size="110,30" id="capture_size_x" placeholder="Size X" pos="10,150" enabled="0"></textbox>
-        <textbox size="110,30" pos="130,150" id="capture_size_y" placeholder="Size Y" enabled="0"></textbox>
+        <textbox size="110,30" consumer="capture_size_x_consumer" id="capture_size_x" placeholder="Size X" pos="10,150"></textbox>
+        <textbox size="110,30" consumer="capture_size_y_consumer" pos="130,150" id="capture_size_y" placeholder="Size Y"></textbox>
         <textbox size="70,30" pos="170,90" consumer="projection_offset_z_consumer" placeholder="Offset Z" id="projection_offset_z"></textbox>
     </container>
     <container color="#00000099" id="settings_2" scrollable="0" size="250,200" pos="280,30">
