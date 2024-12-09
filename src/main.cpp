@@ -9,6 +9,11 @@
 #pragma comment(lib, "Dwmapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #include <dwmapi.h>
+#elif __linux__
+#include <X11/Xlib.h>
+#include <X11/extensions/shape.h>
+#undef Status
+#undef None
 #endif // _WIN32
 
 enum class Status {
@@ -54,9 +59,49 @@ static void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size);
 static void unpackData(const void* src, void* dst, uint32_t size, uint32_t& offset);
 static void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_t& offset);
 
-int main(){
+int main() {
 
+#ifdef _WIN32
 	sf::RenderWindow window(sf::VideoMode(320, 240), "Projector server", sf::Style::None);
+#elif __linux__
+	// make x11 window with transparent background
+	Display* display = XOpenDisplay(NULL);
+
+	XVisualInfo vinfo;
+	XMatchVisualInfo(display, DefaultScreen(display), 32, TrueColor, &vinfo);
+
+	XSetWindowAttributes attr;
+	attr.colormap = XCreateColormap(display, DefaultRootWindow(display), vinfo.visual, AllocNone);
+	attr.border_pixel = 0;
+	attr.background_pixel = 0;
+
+	Window win = XCreateWindow(display, DefaultRootWindow(display), 0, 0, 300, 200, 0, vinfo.depth, InputOutput, vinfo.visual, CWColormap | CWBorderPixel | CWBackPixel, &attr);
+	XSelectInput(display, win, StructureNotifyMask);
+	GC gc = XCreateGC(display, win, 0, 0);
+
+	Atom wmDeleteWindow = XInternAtom(display, "WM_DELETE_WINDOW", 0);
+
+	// disable window decorations
+	Atom mwmHintsProperty = XInternAtom(display, "_MOTIF_WM_HINTS", 0);
+
+	struct MwmHints {
+		unsigned long flags{};
+		unsigned long functions{};
+		unsigned long decorations{};
+		long input_mode{};
+		unsigned long status{};
+	};
+
+	struct MwmHints hints;
+	hints.flags = (1L << 1);
+	hints.decorations = 0;
+	XChangeProperty(display, win, mwmHintsProperty, mwmHintsProperty, 32, PropModeReplace, (unsigned char*)&hints, 5);
+
+	XSetWMProtocols(display, win, &wmDeleteWindow, 1);
+	XMapWindow(display, win);
+
+	sf::RenderWindow window(win);
+#endif // _WIN32
 	window.setFramerateLimit(framerate);
 	setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
 
@@ -83,8 +128,6 @@ int main(){
 	bmi.bmiHeader.biHeight = displayReadSizeY;
 	bmi.bmiHeader.biWidth = displayReadSizeX;
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
-#elif __linux__
-
 #endif // _WIN32
 
 	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
@@ -125,7 +168,7 @@ int main(){
 
 
 		outPackets.clear();
-		if (currentStatus != Status::WAITING){
+		if (currentStatus != Status::WAITING) {
 			static std::vector<uint8_t> inPacket;
 			size_t received = 0;
 			do {
@@ -151,7 +194,7 @@ int main(){
 
 			uint8_t ping = 0;
 			unpackData(inBuffer, REFNSIZE(ping), unpackOffset);
-			if (ping == 0){
+			if (ping == 0) {
 				std::cout << "Connection reset by server" << std::endl;
 				setStatus(statusText, currentStatus, Status::WAITING);
 				socket.setBlocking(true);
@@ -227,24 +270,24 @@ int main(){
 				uint32_t offset = 0;
 				packData(outPacket, REFNSIZE(packBitmask), offset);
 			}
-			
+
 			sendMessage(socket, outPacket.data(), packOffset);
 
 			if (lastBitmask != unpackBitmask) {
 				lastBitmask = unpackBitmask;
-				if (synchonized && !(lastBitmask & BitMask::CAPTURE)){
+				if (synchonized && !(lastBitmask & BitMask::CAPTURE)) {
 					setStatus(statusText, currentStatus, Status::READY);
 				}
 			}
 		}
 		inPackets.clear();
 
-		if (currentStatus == Status::WAITING){
+		if (currentStatus == Status::WAITING) {
 			static float connectTimer = 0.f;
 			connectTimer += delta;
 			if (connectTimer > 1) {
 				connectTimer = 0;
-				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01)) == sf::Socket::Status::Done){
+				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01)) == sf::Socket::Status::Done) {
 					std::cout << "Connected to the server" << std::endl;
 					synchonized = false;
 					setStatus(statusText, currentStatus, Status::CONNECTED);
@@ -255,8 +298,8 @@ int main(){
 
 		if (grabbedWindow) grabbedWindow = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 		sf::Event e;
-		while(window.pollEvent(e)){
-			if (e.type == sf::Event::Closed) 
+		while (window.pollEvent(e)) {
+			if (e.type == sf::Event::Closed)
 				window.close();
 			else if (e.type == sf::Event::MouseButtonPressed) {
 				if (e.mouseButton.button == sf::Mouse::Left) {
@@ -285,7 +328,7 @@ int main(){
 		window.draw(statusContainerSprite);
 		window.display();
 	}
-	if (currentStatus != Status::WAITING){
+	if (currentStatus != Status::WAITING) {
 		socket.disconnect();
 	}
 
@@ -339,10 +382,10 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 
 	socket.setBlocking(false);
 	status = socket.receive(REFNSIZE(protocolMagic), received);
-	if (received == 0 || status != sf::Socket::Status::Done){
+	if (received == 0 || status != sf::Socket::Status::Done) {
 		return status;
 	}
-	else if (protocolMagic != PROTOCOL_MAGIC || received != sizeof(protocolMagic)){
+	else if (protocolMagic != PROTOCOL_MAGIC || received != sizeof(protocolMagic)) {
 		std::cout << "[WARNING]: No protocol magic or invalid protocol detected" << std::endl;
 		cleanUpSocket(socket);
 		return status;
@@ -351,7 +394,7 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 	status = socket.receive(REFNSIZE(messageSize), received);
 	if (received != sizeof(messageSize) || status != sf::Socket::Status::Done) {
 		std::cout << "[WARNING]: Invalid message format" << std::endl;
-		cleanUpSocket(socket);	
+		cleanUpSocket(socket);
 		return status;
 	}
 	if (messageSize == 0 || messageSize >= RECEIVE_MAX_SIZE) {
@@ -372,7 +415,7 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 		offset += l_received;
 		messageSize -= l_received;
 
-		if (l_received == 0){
+		if (l_received == 0) {
 			std::cout << "[WARNING]: Read buffer empty" << std::endl;
 			return status;
 		}
@@ -387,7 +430,7 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 
 void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 	socket.setBlocking(true);
-	
+
 	uint32_t offset = 0;
 	std::vector<uint8_t> additional(sizeof(PROTOCOL_MAGIC) + sizeof(size));
 	packData(additional, REFNSIZE(PROTOCOL_MAGIC), offset);
