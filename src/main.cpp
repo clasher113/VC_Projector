@@ -130,8 +130,12 @@ int main() {
 	bmi.bmiHeader.biHeight = displayReadSizeY;
 	bmi.bmiHeader.biWidth = displayReadSizeX;
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
-#endif // _WIN32
+#elif __linux__
+	Window root = DefaultRootWindow(display);
 
+	XWindowAttributes attributes = { 0 };
+	XGetWindowAttributes(display, root, &attributes);
+#endif // _WIN32
 	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 	Status currentStatus = Status::WAITING;
 
@@ -248,7 +252,14 @@ int main() {
 					BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, SRCCOPY);
 					GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSizeY, &pixels[0], &bmi, DIB_RGB_COLORS);
 #elif __linux__
-					// todo implement
+					XImage* img = XGetImage(display, root, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, displayReadSizeX, displayReadSizeY, AllPlanes, ZPixmap);
+					unsigned int location = (displayReadSizeY - 1) * (displayReadSizeX * 4);
+					for (int i = 0; i < displayReadSizeY - 1; ++i) {
+						memcpy(&pixels[i * (displayReadSizeX)], &img->data[location], displayReadSizeX * 4);
+						location -= displayReadSizeX * 4;
+					}
+
+					XDestroyImage(img);
 #endif // _WIN32
 					std::vector<uint8_t> monochromePixels;
 					monochromePixels.reserve(displayResolutionX * displayResolutionY);
