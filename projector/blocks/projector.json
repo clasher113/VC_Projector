@@ -1,7 +1,10 @@
 {
-  "model": "aabb",
+  "model": "custom",
+  "model-primitives": {
+    "tetragons": [ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, "black5" ] ]
+  },
   "light-passing": true,
   "sky-light-passing": true,
-  "texture": "transparent",
-  "hitbox": [ 0.23, 0.0, 0.09, 0.53, 0.97, 0.7 ]
+  "hitbox": [ 0, 0, 0, 1, 1, 1 ],
+  "texture": "black5"
 }
