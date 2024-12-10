@@ -10,6 +10,5 @@ end
 
 function on_world_save()
 	SYNC.close_server()
-	DISPLAY.save_config()
 	LIMIT.save()
 end

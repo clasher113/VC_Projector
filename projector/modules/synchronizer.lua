@@ -67,7 +67,9 @@ SYNC.server_routine = function()
 		return
 	elseif (client:is_connected() == false) then
 		debug.log("client disconnect")
-		SYNC.on_disconnect_callback()
+		if (SYNC.on_disconnect_callback ~= nil) then
+			SYNC.on_disconnect_callback()
+		end
 		SYNC.is_syncing = false
 		SYNC.is_capturing = false
 		SYNC.is_synchronized = false

@@ -82,16 +82,16 @@ function on_open()
 
 		if (file.isfile(config_file) == true) then
 			default_refresh_rate = DISPLAY.refresh_rate
-			default_projection_size_x = DISPLAY.resolution_x
-			default_projection_size_y = DISPLAY.resolution_y
-			default_capture_size_x = SYNC.capture_size_x
-			default_capture_size_y = SYNC.capture_size_y
-			default_projection_offset_x = DISPLAY.offset_x
-			default_projection_offset_y = DISPLAY.offset_y
-			default_projection_offset_z = DISPLAY.offset_z
+			default_projection_size_x = tostring(DISPLAY.resolution_x)
+			default_projection_size_y = tostring(DISPLAY.resolution_y)
+			default_capture_size_x = tostring(SYNC.capture_size_x)
+			default_capture_size_y = tostring(SYNC.capture_size_y)
+			default_projection_offset_x = tostring(DISPLAY.offset_x)
+			default_projection_offset_y = tostring(DISPLAY.offset_y)
+			default_projection_offset_z = tostring(DISPLAY.offset_z)
 		else
-			init_display()
-			DISPLAY.save_config()
+			DISPLAY.orientation = 1
+			DISPLAY.axis = 1
 		end
 
 		-- set default values
@@ -106,6 +106,7 @@ function on_open()
 		orientation_button.text = "Orientation: " .. orientations[DISPLAY.orientation]
 		axis_button.text = "Axis: " .. axes[DISPLAY.axis]
 		fps_consumer("")
+		init_display()
 
 		SYNC.on_disconnect_callback = function()
 			if (SYNC.is_capturing == true) then
@@ -183,6 +184,7 @@ function init_display()
 	DISPLAY.offset_z = tonumber(projection_offset_z_textbox.text)
 	DISPLAY.axis = get_axis_index()
 	DISPLAY.orientation = get_orientation_index()
+	DISPLAY.save_config()
 end
 
 function synchronize()

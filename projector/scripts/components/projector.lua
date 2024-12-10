@@ -14,7 +14,7 @@ end
 
 function on_update(tps)
 	local dst_pos = {DISPLAY.position_x + DISPLAY.offset_x, DISPLAY.position_y + DISPLAY.offset_y, DISPLAY.position_z + DISPLAY.offset_z}
-	local size
+	local size = {0, 0, 0}
 
 	if (DISPLAY.orientation == 1) then
 		if (DISPLAY.axis == 1) then
