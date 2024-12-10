@@ -3,7 +3,8 @@ project(ProjectorServer)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+file(GLOB SRC "src/*.cpp")
+add_executable(${PROJECT_NAME} ${SRC})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics)
 target_link_libraries(${PROJECT_NAME} PRIVATE sfml-network)
