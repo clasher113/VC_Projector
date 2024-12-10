@@ -254,7 +254,7 @@ int main() {
 #elif __linux__
 					XImage* img = XGetImage(display, root, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, displayReadSizeX, displayReadSizeY, AllPlanes, ZPixmap);
 					unsigned int location = (displayReadSizeY - 1) * (displayReadSizeX * 4);
-					for (int i = 0; i < displayReadSizeY - 1; ++i) {
+					for (int i = 0; i < displayReadSizeY; ++i) {
 						memcpy(&pixels[i * (displayReadSizeX)], &img->data[location], displayReadSizeX * 4);
 						location -= displayReadSizeX * 4;
 					}
