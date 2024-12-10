@@ -16,6 +16,8 @@
 #undef None
 #endif // _WIN32
 
+#include "font_binary.hpp"
+
 enum class Status {
 	WAITING = 1,
 	CONNECTED,
@@ -141,7 +143,7 @@ int main() {
 	updateBorder(border);
 
 	sf::Font font;
-	font.loadFromFile("C://Windows//Fonts//arial.ttf");
+	font.loadFromMemory(font_binary::getData(), font_binary::getSize());
 
 	sf::Text statusText("", font, 20U);
 	setStatus(statusText, currentStatus, currentStatus);
