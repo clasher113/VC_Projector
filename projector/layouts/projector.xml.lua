@@ -113,7 +113,7 @@ function on_open()
 			document["tooltip"].tooltip = "RGB addon require"
 			document["tooltip"].tooltipDelay = 0
 		else
-			rgb_mode_checkbox.checked = RGB.is_active
+			rgb_mode_checkbox.checked = CONFIG.rgb_mode
 		end
 		fps_consumer("")
 		same_size_consumer(CONFIG.same_size)

@@ -51,8 +51,12 @@ SYNC.close_server = function()
 	end
 end
 
+local ups = 0
+local ups_timer = 0.0
+
 SYNC.server_routine = function()
 	refresh_timer = refresh_timer + time.delta()
+	--ups_timer = ups_timer + time.delta()
 	local refresh_interval = 1.0 / CONFIG.refresh_rate
 	if (refresh_timer < refresh_interval) then
 		return
@@ -60,6 +64,13 @@ SYNC.server_routine = function()
 	while (refresh_timer > refresh_interval) do
 		refresh_timer = refresh_timer - refresh_interval
 	end
+
+	--ups = ups + 1
+	--if (ups_timer > 1) then
+	--	ups_timer = ups_timer - 1
+	--	print(ups)
+	--	ups = 0
+	--end
 
 	if (client == nil) then
 		return
@@ -106,7 +117,8 @@ SYNC.server_routine = function()
 			if (capture_success == false) then
 				table.insert(SYNC.statuses, "Capture error")
 			elseif (SYNC.is_capturing == true) then
-				local pixels = buffer:get_bytes(CONFIG.resolution_x * CONFIG.resolution_y)
+				local pixelsSize = buffer:get_uint32()
+				local pixels = buffer:get_bytes(pixelsSize)
 				DISPLAY.update(pixels)
 			end
 		end
@@ -129,6 +141,7 @@ SYNC.server_routine = function()
 	if (SYNC.is_capturing == true) then
 		bit_mask = bit.bor(bit_mask, BIT_MASK.CAPTURE)
 		out_buffer:put_bool(true)
+		out_buffer:put_bool(CONFIG.rgb_mode)
 	end
 	out_buffer:set_position(1)
 	out_buffer:put_uint32(bit_mask)
