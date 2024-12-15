@@ -1,0 +1,10 @@
+{
+  "id": "projector_rgb_addon",
+  "description": "no description",
+  "title": "Projector RGB addon",
+  "creator": "clasher113",
+  "version": "1.0",
+  "dependencies":[
+	"!projector"
+  ]
+}
