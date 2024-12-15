@@ -1,7 +1,3 @@
-require "projector:display"
-require "projector:synchronizer"
-require "projector:instance_limit"
-
 function on_interact(x, y, z, pid)
     LIMIT.set_position({x, y, z})
     hud.show_overlay("projector:projector")

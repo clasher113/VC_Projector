@@ -5,8 +5,6 @@ SYNC = {}
 SYNC.is_syncing = false
 SYNC.is_capturing = false
 SYNC.is_synchronized = false
-SYNC.capture_size_x = 0
-SYNC.capture_size_y = 0
 SYNC.statuses = {}
 SYNC.on_disconnect_callback = nil
 
@@ -55,7 +53,7 @@ end
 
 SYNC.server_routine = function()
 	refresh_timer = refresh_timer + time.delta()
-	local refresh_interval = 1.0 / DISPLAY.refresh_rate
+	local refresh_interval = 1.0 / CONFIG.refresh_rate
 	if (refresh_timer < refresh_interval) then
 		return
 	end
@@ -108,7 +106,7 @@ SYNC.server_routine = function()
 			if (capture_success == false) then
 				table.insert(SYNC.statuses, "Capture error")
 			elseif (SYNC.is_capturing == true) then
-				local pixels = buffer:get_bytes(DISPLAY.resolution_x * DISPLAY.resolution_y)
+				local pixels = buffer:get_bytes(CONFIG.resolution_x * CONFIG.resolution_y)
 				DISPLAY.update(pixels)
 			end
 		end
@@ -121,11 +119,11 @@ SYNC.server_routine = function()
 	out_buffer:put_bool(true)
 	if (SYNC.is_syncing == true) then
 		bit_mask = bit.bor(bit_mask, BIT_MASK.SYNC)
-		out_buffer:put_uint16(DISPLAY.refresh_rate)
-		out_buffer:put_uint16(DISPLAY.resolution_x)
-		out_buffer:put_uint16(DISPLAY.resolution_y)
-		out_buffer:put_uint16(SYNC.capture_size_x)
-		out_buffer:put_uint16(SYNC.capture_size_y)
+		out_buffer:put_uint16(CONFIG.refresh_rate)
+		out_buffer:put_uint16(CONFIG.resolution_x)
+		out_buffer:put_uint16(CONFIG.resolution_y)
+		out_buffer:put_uint16(CONFIG.capture_size_x)
+		out_buffer:put_uint16(CONFIG.capture_size_y)
 		SYNC.is_syncing = false
 	end
 	if (SYNC.is_capturing == true) then

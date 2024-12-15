@@ -1,6 +1,3 @@
-require "projector:synchronizer"
-require "projector:display"
-
 local logs_panel
 local status_label
 local settings_container_1
@@ -19,6 +16,8 @@ local projection_offset_y_textbox
 local projection_offset_z_textbox
 local capture_size_x_textbox
 local capture_size_y_textbox
+local same_size_checkbox
+local rgb_mode_checkbox
 
 local default_projection_size_x = "180"
 local default_projection_size_y = "120"
@@ -31,7 +30,6 @@ local default_refresh_rate = 30
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
-local config_file = pack.shared_file("projector", "config")
 
 local logs_num = 1
 local single_time_init = false
@@ -76,22 +74,25 @@ function on_open()
 		projection_offset_z_textbox = document["projection_offset_z"]
 		capture_size_x_textbox = document["capture_size_x"]
 		capture_size_y_textbox = document["capture_size_y"]
+		same_size_checkbox = document["same_size"]
+		rgb_mode_checkbox = document["rgb_mode"]
 
 		single_time_init = true
 		settings_container_1:setInterval(1, on_game_update)
 
-		if (file.isfile(config_file) == true) then
-			default_refresh_rate = DISPLAY.refresh_rate
-			default_projection_size_x = tostring(DISPLAY.resolution_x)
-			default_projection_size_y = tostring(DISPLAY.resolution_y)
-			default_capture_size_x = tostring(SYNC.capture_size_x)
-			default_capture_size_y = tostring(SYNC.capture_size_y)
-			default_projection_offset_x = tostring(DISPLAY.offset_x)
-			default_projection_offset_y = tostring(DISPLAY.offset_y)
-			default_projection_offset_z = tostring(DISPLAY.offset_z)
+		if (CONFIG.is_loaded() == true) then
+			default_refresh_rate = CONFIG.refresh_rate
+			default_projection_size_x = tostring(CONFIG.resolution_x)
+			default_projection_size_y = tostring(CONFIG.resolution_y)
+			default_capture_size_x = tostring(CONFIG.capture_size_x)
+			default_capture_size_y = tostring(CONFIG.capture_size_y)
+			default_projection_offset_x = tostring(CONFIG.offset_x)
+			default_projection_offset_y = tostring(CONFIG.offset_y)
+			default_projection_offset_z = tostring(CONFIG.offset_z)
+			clear_on_stop_checkbox.checked = CONFIG.clear_on_stop
 		else
-			DISPLAY.orientation = 1
-			DISPLAY.axis = 1
+			CONFIG.orientation = 1
+			CONFIG.axis = 1
 		end
 
 		-- set default values
@@ -103,9 +104,19 @@ function on_open()
 		projection_offset_z_textbox.text = default_projection_offset_z
 		capture_size_x_textbox.text = projection_size_x_textbox.text
 		capture_size_y_textbox.text = projection_size_y_textbox.text
-		orientation_button.text = "Orientation: " .. orientations[DISPLAY.orientation]
-		axis_button.text = "Axis: " .. axes[DISPLAY.axis]
+		orientation_button.text = "Orientation: " .. orientations[CONFIG.orientation]
+		axis_button.text = "Axis: " .. axes[CONFIG.axis]
+		if (RGB.is_loaded() ~= true) then
+			rgb_mode_checkbox.enabled = false
+			rgb_mode_checkbox.checked = false
+			settings_container_2:add("<container id='tooltip' color='#00000000' size='" .. rgb_mode_checkbox.size[1] .. "," .. rgb_mode_checkbox.size[2] .."' pos='".. rgb_mode_checkbox.pos[1] .. "," .. rgb_mode_checkbox.pos[2] .. "'></container>")
+			document["tooltip"].tooltip = "RGB addon require"
+			document["tooltip"].tooltipDelay = 0
+		else
+			rgb_mode_checkbox.checked = RGB.is_active
+		end
 		fps_consumer("")
+		same_size_consumer(CONFIG.same_size)
 		init_display()
 
 		SYNC.on_disconnect_callback = function()
@@ -174,17 +185,20 @@ function get_axis_index()
 end
 
 function init_display()
-	DISPLAY.refresh_rate = refresh_rate_trackbar.value
-	DISPLAY.resolution_x = tonumber(projection_size_x_textbox.text)
-	DISPLAY.resolution_y = tonumber(projection_size_y_textbox.text)
-	SYNC.capture_size_x = tonumber(capture_size_x_textbox.text)
-	SYNC.capture_size_y = tonumber(capture_size_y_textbox.text)
-	DISPLAY.offset_x = tonumber(projection_offset_x_textbox.text)
-	DISPLAY.offset_y = tonumber(projection_offset_y_textbox.text)
-	DISPLAY.offset_z = tonumber(projection_offset_z_textbox.text)
-	DISPLAY.axis = get_axis_index()
-	DISPLAY.orientation = get_orientation_index()
-	DISPLAY.save_config()
+	CONFIG.refresh_rate = refresh_rate_trackbar.value
+	CONFIG.resolution_x = tonumber(projection_size_x_textbox.text)
+	CONFIG.resolution_y = tonumber(projection_size_y_textbox.text)
+	CONFIG.capture_size_x = tonumber(capture_size_x_textbox.text)
+	CONFIG.capture_size_y = tonumber(capture_size_y_textbox.text)
+	CONFIG.offset_x = tonumber(projection_offset_x_textbox.text)
+	CONFIG.offset_y = tonumber(projection_offset_y_textbox.text)
+	CONFIG.offset_z = tonumber(projection_offset_z_textbox.text)
+	CONFIG.axis = get_axis_index()
+	CONFIG.orientation = get_orientation_index()
+	CONFIG.same_size = same_size_checkbox.checked
+	CONFIG.clear_on_stop = clear_on_stop_checkbox.checked
+	CONFIG.rgb_mode = rgb_mode_checkbox.checked
+	CONFIG.write()
 end
 
 function synchronize()
@@ -246,12 +260,18 @@ function projection_size_x_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
 		projection_size_x_textbox.text = default_projection_size_x
 	end
+	if (same_size_checkbox.checked == true) then
+		capture_size_x_textbox.text = projection_size_x_textbox.text
+	end
 	SYNC.is_synchronized = false
 end
 
 function projection_size_y_consumer(string)
 	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
 		projection_size_y_textbox.text = default_projection_size_y
+	end
+	if (same_size_checkbox.checked == true) then
+		capture_size_y_textbox.text = projection_size_y_textbox.text
 	end
 	SYNC.is_synchronized = false
 end
@@ -286,6 +306,20 @@ function projection_offset_z_consumer(string)
 	if (handle_textbox(string, 0, 255, "Projection offset Z") == false) then
 		projection_offset_z_textbox.text = default_projection_offset_z
 	end
+end
+
+function same_size_consumer(checked)
+	same_size_checkbox.checked = checked
+	capture_size_x_textbox.enabled = (checked == false)
+	capture_size_y_textbox.enabled = (checked == false)
+	if (checked == true) then
+		capture_size_x_textbox.text = projection_size_x_textbox.text
+		capture_size_y_textbox.text = projection_size_y_textbox.text
+	end
+end
+
+function rgb_mode_consumer(checked)
+	
 end
 
 function clear_display()

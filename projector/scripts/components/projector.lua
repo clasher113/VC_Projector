@@ -1,6 +1,3 @@
-require "projector:display"
-require "projector:synchronizer"
-
 local skeleton = entity.skeleton
 local transform = entity.transform
 
@@ -13,20 +10,20 @@ function on_attacked(attacker, pid)
 end
 
 function on_update(tps)
-	local dst_pos = {DISPLAY.position_x + DISPLAY.offset_x, DISPLAY.position_y + DISPLAY.offset_y, DISPLAY.position_z + DISPLAY.offset_z}
+	local dst_pos = {DISPLAY.position_x + CONFIG.offset_x, DISPLAY.position_y + CONFIG.offset_y, DISPLAY.position_z + CONFIG.offset_z}
 	local size = {0, 0, 0}
 
-	if (DISPLAY.orientation == 1) then
-		if (DISPLAY.axis == 1) then
-			size = {DISPLAY.resolution_x, DISPLAY.resolution_y, 1.0}
-		elseif (DISPLAY.axis == 2) then
-			size = {1.0, DISPLAY.resolution_y, DISPLAY.resolution_x}
+	if (CONFIG.orientation == 1) then
+		if (CONFIG.axis == 1) then
+			size = {CONFIG.resolution_x, CONFIG.resolution_y, 1.0}
+		elseif (CONFIG.axis == 2) then
+			size = {1.0, CONFIG.resolution_y, CONFIG.resolution_x}
 		end
-	elseif (DISPLAY.orientation == 2) then
-		if (DISPLAY.axis == 1) then
-			size = {DISPLAY.resolution_x, 1.0, DISPLAY.resolution_y}
-		elseif (DISPLAY.axis == 2) then
-			size = {DISPLAY.resolution_y, 1.0, DISPLAY.resolution_x}
+	elseif (CONFIG.orientation == 2) then
+		if (CONFIG.axis == 1) then
+			size = {CONFIG.resolution_x, 1.0, CONFIG.resolution_y}
+		elseif (CONFIG.axis == 2) then
+			size = {CONFIG.resolution_y, 1.0, CONFIG.resolution_x}
 		end
 	end
 	dst_pos = vec3.add(dst_pos, vec3.div(size, 2))
