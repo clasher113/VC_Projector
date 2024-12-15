@@ -1,8 +1,0 @@
-{
-	"components": [
-		"projector:projector"
-	],
-	"skeleton-name": "projector:projector_skeleton",
-	"body-type": "static",
-	"hitbox": [ 0.9, 0.9, 0.9 ]
-}
