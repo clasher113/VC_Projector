@@ -5,6 +5,8 @@
 #include <SFML/Network.hpp>
 
 #ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Dwmapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
@@ -106,6 +108,7 @@ int main() {
 #endif // _WIN32
 	window.setFramerateLimit(framerate);
 	setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
+	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
 
 #ifdef _WIN32
 	MARGINS margins{};
@@ -136,7 +139,7 @@ int main() {
 	XWindowAttributes attributes = { 0 };
 	XGetWindowAttributes(display, root, &attributes);
 #endif // _WIN32
-	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
+
 	Status currentStatus = Status::WAITING;
 
 	sf::RectangleShape border;
@@ -239,7 +242,9 @@ int main() {
 			if (unpackBitmask & BitMask::CAPTURE) {
 				packBitmask |= BitMask::CAPTURE;
 				uint8_t capture = 0;
+				uint8_t rgbMode = 0;
 				unpackData(inBuffer, REFNSIZE(capture), unpackOffset);
+				unpackData(inBuffer, REFNSIZE(rgbMode), unpackOffset);
 
 				if (capture && currentStatus == Status::READY) {
 					setStatus(statusText, currentStatus, Status::CAPTURING);
@@ -262,7 +267,7 @@ int main() {
 					XDestroyImage(img);
 #endif // _WIN32
 					std::vector<uint8_t> monochromePixels;
-					monochromePixels.reserve(displayResolutionX * displayResolutionY);
+					monochromePixels.reserve(displayResolutionX * displayResolutionY * (rgbMode ? 3 : 1));
 
 					const float scale_x = static_cast<float>(displayReadSizeX) / displayResolutionX;
 					const float scale_y = static_cast<float>(displayReadSizeY) / displayResolutionY;
@@ -272,10 +277,16 @@ int main() {
 							const size_t read_x = x * scale_x;
 							const size_t read_y = y * scale_y;
 							const sf::Color& rgbPixel = pixels[read_y * displayReadSizeX + read_x];
-							monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
+							if (rgbMode) {
+								monochromePixels.emplace_back(rgbPixel.b / 16 | rgbPixel.g / 16 << 4);
+								monochromePixels.emplace_back(rgbPixel.r / 16);
+							}
+							else monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
 						}
 					}
 
+					const uint32_t pixelsSize = monochromePixels.size();
+					packData(outPacket, REFNSIZE(pixelsSize), packOffset);
 					packData(outPacket, monochromePixels.data(), monochromePixels.size(), packOffset);
 				}
 			}
