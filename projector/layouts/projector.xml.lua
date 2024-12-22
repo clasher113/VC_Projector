@@ -80,20 +80,17 @@ function on_open()
 		single_time_init = true
 		settings_container_1:setInterval(1, on_game_update)
 
-		if (CONFIG.is_loaded() == true) then
-			default_refresh_rate = CONFIG.refresh_rate
-			default_projection_size_x = tostring(CONFIG.resolution_x)
-			default_projection_size_y = tostring(CONFIG.resolution_y)
-			default_capture_size_x = tostring(CONFIG.capture_size_x)
-			default_capture_size_y = tostring(CONFIG.capture_size_y)
-			default_projection_offset_x = tostring(CONFIG.offset_x)
-			default_projection_offset_y = tostring(CONFIG.offset_y)
-			default_projection_offset_z = tostring(CONFIG.offset_z)
-			clear_on_stop_checkbox.checked = CONFIG.clear_on_stop
-		else
-			CONFIG.orientation = 1
-			CONFIG.axis = 1
-		end
+		default_refresh_rate = CONFIG.refresh_rate
+		default_projection_size_x = tostring(CONFIG.resolution_x)
+		default_projection_size_y = tostring(CONFIG.resolution_y)
+		default_capture_size_x = tostring(CONFIG.capture_size_x)
+		default_capture_size_y = tostring(CONFIG.capture_size_y)
+		default_projection_offset_x = tostring(CONFIG.offset_x)
+		default_projection_offset_y = tostring(CONFIG.offset_y)
+		default_projection_offset_z = tostring(CONFIG.offset_z)
+		clear_on_stop_checkbox.checked = CONFIG.clear_on_stop
+		CONFIG.orientation = 1
+		CONFIG.axis = 1
 
 		-- set default values
 		refresh_rate_trackbar.value = default_refresh_rate
@@ -102,8 +99,8 @@ function on_open()
 		projection_offset_x_textbox.text = default_projection_offset_x
 		projection_offset_y_textbox.text = default_projection_offset_y
 		projection_offset_z_textbox.text = default_projection_offset_z
-		capture_size_x_textbox.text = projection_size_x_textbox.text
-		capture_size_y_textbox.text = projection_size_y_textbox.text
+		capture_size_x_textbox.text = default_capture_size_x
+		capture_size_y_textbox.text = default_capture_size_y
 		orientation_button.text = "Orientation: " .. orientations[CONFIG.orientation]
 		axis_button.text = "Axis: " .. axes[CONFIG.axis]
 		if (RGB.is_loaded() ~= true) then
