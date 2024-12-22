@@ -12,8 +12,9 @@ local refresh_timer = 0.0
 local server
 local client
 local PROTOCOL_MAGIC = 0xAAFFFAA
-local MAX_RECEIVE_SIZE = 1024 * 1024
+local MAX_RECEIVE_SIZE = 1024 * 1024 * 1000
 local byte_order = "BE"
+local wait_for_respond = false
 
 local BIT_MASK = {}
 BIT_MASK.NONE = 0x0
@@ -51,105 +52,7 @@ SYNC.close_server = function()
 	end
 end
 
-local ups = 0
-local ups_timer = 0.0
-
-SYNC.server_routine = function()
-	refresh_timer = refresh_timer + time.delta()
-	--ups_timer = ups_timer + time.delta()
-	local refresh_interval = 1.0 / CONFIG.refresh_rate
-	if (refresh_timer < refresh_interval) then
-		return
-	end
-	while (refresh_timer > refresh_interval) do
-		refresh_timer = refresh_timer - refresh_interval
-	end
-
-	--ups = ups + 1
-	--if (ups_timer > 1) then
-	--	ups_timer = ups_timer - 1
-	--	print(ups)
-	--	ups = 0
-	--end
-
-	if (client == nil) then
-		return
-	elseif (client:is_connected() == false) then
-		debug.log("client disconnect")
-		if (SYNC.on_disconnect_callback ~= nil) then
-			SYNC.on_disconnect_callback()
-		end
-		SYNC.is_syncing = false
-		SYNC.is_capturing = false
-		SYNC.is_synchronized = false
-		client = nil
-		return
-	end
-
-	local packets_size = 0
-	while(true) do
-		local buffer = SYNC.receive()
-		if (buffer == nil) then
-			break
-		end
-
-		local bit_mask = buffer:get_uint32()
-
-		local ping = buffer:get_bool()
-		if (ping == false) then
-			client:close()		
-			client = nil
-			return
-		end
-		if (bit.band(bit_mask, BIT_MASK.SYNC) > 0) then
-			local sync_success = buffer:get_bool()
-			if (sync_success == false) then
-				SYNC.is_synchronized = false
-				table.insert(SYNC.statuses, "Synchronization error")
-			else
-				SYNC.is_synchronized = true
-				table.insert(SYNC.statuses, "Synchronization success")
-			end
-		end
-
-		if (bit.band(bit_mask, BIT_MASK.CAPTURE) > 0) then
-			local capture_success = buffer:get_bool()
-			if (capture_success == false) then
-				table.insert(SYNC.statuses, "Capture error")
-			elseif (SYNC.is_capturing == true) then
-				local pixelsSize = buffer:get_uint32()
-				local pixels = buffer:get_bytes(pixelsSize)
-				DISPLAY.update(pixels)
-			end
-		end
-	end
-
-	local out_buffer = data_buffer()
-	out_buffer:set_order(byte_order)
-
-	local bit_mask = BIT_MASK.PING_PONG
-	out_buffer:put_bool(true)
-	if (SYNC.is_syncing == true) then
-		bit_mask = bit.bor(bit_mask, BIT_MASK.SYNC)
-		out_buffer:put_uint16(CONFIG.refresh_rate)
-		out_buffer:put_uint16(CONFIG.resolution_x)
-		out_buffer:put_uint16(CONFIG.resolution_y)
-		out_buffer:put_uint16(CONFIG.capture_size_x)
-		out_buffer:put_uint16(CONFIG.capture_size_y)
-		SYNC.is_syncing = false
-	end
-	if (SYNC.is_capturing == true) then
-		bit_mask = bit.bor(bit_mask, BIT_MASK.CAPTURE)
-		out_buffer:put_bool(true)
-		out_buffer:put_bool(CONFIG.rgb_mode)
-	end
-	out_buffer:set_position(1)
-	out_buffer:put_uint32(bit_mask)
-
-	SYNC.send(out_buffer)
-end
-
-SYNC.send = function(byte_arr)
+local function send(byte_arr)
 	local additional = data_buffer()
 	additional:set_order(byte_order)
 	additional:put_uint32(PROTOCOL_MAGIC)
@@ -160,7 +63,8 @@ SYNC.send = function(byte_arr)
 	--debug.log("sent " .. tostring(byte_arr:size()) .. " bytes")
 end
 
-function cleanup_socket()
+local function cleanup_socket()
+	wait_for_respond = false
 	while (true) do
 		local temp = client:recv(1024, false)
 		if (temp == nil or #temp == 0) then
@@ -169,7 +73,7 @@ function cleanup_socket()
 	end
 end
 
-SYNC.receive = function()
+local function receive()
 	local data = client:recv(4, false)
 	if (data == nil or #data == 0) then
 		return nil
@@ -212,6 +116,109 @@ SYNC.receive = function()
 	--debug.log("received " .. tostring(out_data:size()) .. " bytes")
 	out_data:set_position(1)
 	return out_data	
+end
+
+local ups = 0
+local ups_timer = 0.0
+
+SYNC.server_routine = function()
+	refresh_timer = refresh_timer + time.delta()
+	ups_timer = ups_timer + time.delta()
+	local refresh_interval = 1.0 / CONFIG.refresh_rate
+	if (refresh_timer < refresh_interval) then
+		return
+	end
+	while (refresh_timer > refresh_interval) do
+		refresh_timer = refresh_timer - refresh_interval
+	end
+
+	--if (ups_timer > 1) then
+	--	ups_timer = ups_timer - 1
+	--	print(ups)
+	--	ups = 0
+	--end
+
+	if (client == nil) then
+		return
+	elseif (client:is_connected() == false) then
+		debug.log("client disconnect")
+		if (SYNC.on_disconnect_callback ~= nil) then
+			SYNC.on_disconnect_callback()
+		end
+		SYNC.is_syncing = false
+		SYNC.is_capturing = false
+		SYNC.is_synchronized = false
+		wait_for_respond = false
+		client = nil
+		return
+	end
+
+	while(true) do
+		local buffer = receive()
+
+		if (buffer == nil or buffer:size() == 0) then
+			break
+		end
+
+		wait_for_respond = false
+		local bit_mask = buffer:get_uint32()
+
+		local ping = buffer:get_bool()
+		if (ping == false) then
+			client:close()		
+			client = nil
+			return
+		end
+		if (bit.band(bit_mask, BIT_MASK.SYNC) > 0) then
+			local sync_success = buffer:get_bool()
+			if (sync_success == false) then
+				SYNC.is_synchronized = false
+				table.insert(SYNC.statuses, "Synchronization error")
+			else
+				SYNC.is_synchronized = true
+				table.insert(SYNC.statuses, "Synchronization success")
+			end
+		end
+
+		if (bit.band(bit_mask, BIT_MASK.CAPTURE) > 0) then
+			local capture_success = buffer:get_bool()
+			if (capture_success == false) then
+				table.insert(SYNC.statuses, "Capture error")
+			elseif (SYNC.is_capturing == true) then
+				local pixelsSize = buffer:get_uint32()
+				local pixels = buffer:get_bytes(pixelsSize)
+				DISPLAY.update(pixels)
+				--ups = ups + 1
+			end
+		end
+	end
+
+	if (wait_for_respond == false) then
+		local out_buffer = data_buffer()
+		out_buffer:set_order(byte_order)
+
+		local bit_mask = BIT_MASK.PING_PONG
+		out_buffer:put_bool(true)
+		if (SYNC.is_syncing == true) then
+			bit_mask = bit.bor(bit_mask, BIT_MASK.SYNC)
+			out_buffer:put_uint16(CONFIG.refresh_rate)
+			out_buffer:put_uint16(CONFIG.resolution_x)
+			out_buffer:put_uint16(CONFIG.resolution_y)
+			out_buffer:put_uint16(CONFIG.capture_size_x)
+			out_buffer:put_uint16(CONFIG.capture_size_y)
+			SYNC.is_syncing = false
+		end
+		if (SYNC.is_capturing == true) then
+			bit_mask = bit.bor(bit_mask, BIT_MASK.CAPTURE)
+			out_buffer:put_bool(true)
+			out_buffer:put_bool(CONFIG.rgb_mode)
+		end
+		out_buffer:set_position(1)
+		out_buffer:put_uint32(bit_mask)
+
+		send(out_buffer)
+		wait_for_respond = true
+	end
 end
 
 SYNC.is_connected = function()

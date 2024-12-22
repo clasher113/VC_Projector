@@ -1,5 +1,4 @@
 RGB = {}
-
 RGB.blocks_indices = {}
 
 local is_loaded = false
