@@ -175,7 +175,6 @@ int main() {
 	while (window.isOpen()) {
 		const float delta = clock.restart().asSeconds();
 
-
 		outPackets.clear();
 		if (currentStatus != Status::WAITING) {
 			static std::vector<uint8_t> inPacket;
@@ -190,7 +189,7 @@ int main() {
 				if (received) inPackets.push_back(inPacket);
 			} while (received);
 		}
-		for (auto& packet : inPackets) {
+		for (const auto& packet : inPackets) {	
 			static std::vector<uint8_t> outPacket;
 			const uint8_t* inBuffer = packet.data();
 
@@ -254,7 +253,8 @@ int main() {
 				packData(outPacket, REFNSIZE(capture), packOffset);
 				if (capture) {
 #ifdef _WIN32
-					BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, SRCCOPY);
+					BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, 
+						static_cast<int>(window.getPosition().x + BORDER_THICKNESS), static_cast<int>(window.getPosition().y + BORDER_THICKNESS), SRCCOPY);
 					GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSizeY, &pixels[0], &bmi, DIB_RGB_COLORS);
 #elif __linux__
 					XImage* img = XGetImage(display, root, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, displayReadSizeX, displayReadSizeY, AllPlanes, ZPixmap);
@@ -266,28 +266,28 @@ int main() {
 
 					XDestroyImage(img);
 #endif // _WIN32
-					std::vector<uint8_t> monochromePixels;
-					monochromePixels.reserve(displayResolutionX * displayResolutionY * (rgbMode ? 3 : 1));
+					std::vector<uint8_t> convertedPixels;
+					convertedPixels.reserve(displayResolutionX * displayResolutionY * (rgbMode ? 3 : 1));
 
 					const float scale_x = static_cast<float>(displayReadSizeX) / displayResolutionX;
 					const float scale_y = static_cast<float>(displayReadSizeY) / displayResolutionY;
 
 					for (size_t x = 0; x < displayResolutionX; x++) {
 						for (size_t y = 0; y < displayResolutionY; y++) {
-							const size_t read_x = x * scale_x;
-							const size_t read_y = y * scale_y;
-							const sf::Color& rgbPixel = pixels[read_y * displayReadSizeX + read_x];
+							const size_t read_x = static_cast<size_t>(x * scale_x);
+							const size_t read_y = static_cast<size_t>(y * scale_y);
+							const sf::Color& pixel = pixels[read_y * displayReadSizeX + read_x];
 							if (rgbMode) {
-								monochromePixels.emplace_back(rgbPixel.b / 16 | rgbPixel.g / 16 << 4);
-								monochromePixels.emplace_back(rgbPixel.r / 16);
+								convertedPixels.emplace_back(pixel.b / 16 | pixel.g / 16 << 4);
+								convertedPixels.emplace_back(pixel.r / 16);
 							}
-							else monochromePixels.emplace_back(static_cast<uint8_t>((0.2126 * (rgbPixel.b / 255.f) + 0.7152 * (rgbPixel.g / 255.f) + 0.0722 * (rgbPixel.r / 255.f)) * 15));
+							else convertedPixels.emplace_back(static_cast<uint8_t>((0.2126 * (pixel.b / 255.f) + 0.7152 * (pixel.g / 255.f) + 0.0722 * (pixel.r / 255.f)) * 15));
 						}
 					}
 
-					const uint32_t pixelsSize = monochromePixels.size();
+					const uint32_t pixelsSize = static_cast<uint32_t>(convertedPixels.size());
 					packData(outPacket, REFNSIZE(pixelsSize), packOffset);
-					packData(outPacket, monochromePixels.data(), monochromePixels.size(), packOffset);
+					packData(outPacket, convertedPixels.data(), pixelsSize, packOffset);
 				}
 			}
 			{
@@ -311,7 +311,7 @@ int main() {
 			connectTimer += delta;
 			if (connectTimer > 1) {
 				connectTimer = 0;
-				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01)) == sf::Socket::Status::Done) {
+				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01f)) == sf::Socket::Status::Done) {
 					std::cout << "Connected to the server" << std::endl;
 					synchonized = false;
 					setStatus(statusText, currentStatus, Status::CONNECTED);
@@ -365,7 +365,7 @@ void setWindowSize(sf::RenderWindow& window, const sf::Vector2u& size) {
 	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), statusContainerSize.x),
 							   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + statusContainerSize.y);
 	window.setSize(newSize);
-	window.setView(sf::View(sf::Vector2f(newSize.x / 2, newSize.y / 2), sf::Vector2f(newSize)));
+	window.setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
 }
 
 void updateBorder(sf::RectangleShape& border) {
@@ -437,7 +437,7 @@ sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& b
 		status = socket.receive(buffer.data() + offset, messageSize, l_received);
 		received += l_received;
 		offset += l_received;
-		messageSize -= l_received;
+		messageSize -= static_cast<uint32_t>(l_received);
 
 		if (l_received == 0) {
 			std::cout << "[WARNING]: Read buffer empty" << std::endl;
@@ -482,3 +482,25 @@ void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_
 	memcpy(dst.data() + offset, src, size);
 	offset += size;
 }
+
+// in packet scheme
+// 4 bytes bitmask
+// 1 byte ping
+// if bitmask has sync bit:
+// 2 bytes fps value
+// 2 bytes resolution x value
+// 2 bytes resolution y value
+// 2 bytes read size x value
+// 2 bytes read size y value
+// if bitmask has capture bit: 
+// 1 byte capture require
+// 1 byte rgb mode enabled
+
+// out packet scheme
+// 4 bytes bitmask
+// 1 byte ping
+// if bitmask has sync bit:
+// 1 byte of sync status
+// if bitmask has capture bit: 
+// 4 bytes of pixels size
+// n bytes of pixels data
