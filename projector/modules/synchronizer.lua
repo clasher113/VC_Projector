@@ -12,7 +12,7 @@ local refresh_timer = 0.0
 local server
 local client
 local PROTOCOL_MAGIC = 0xAAFFFAA
-local MAX_RECEIVE_SIZE = 1024 * 1024 * 1000
+local MAX_RECEIVE_SIZE = 1024 * 1024
 local byte_order = "BE"
 local wait_for_respond = false
 
@@ -123,7 +123,7 @@ local ups_timer = 0.0
 
 SYNC.server_routine = function()
 	refresh_timer = refresh_timer + time.delta()
-	ups_timer = ups_timer + time.delta()
+	--ups_timer = ups_timer + time.delta()
 	local refresh_interval = 1.0 / CONFIG.refresh_rate
 	if (refresh_timer < refresh_interval) then
 		return
