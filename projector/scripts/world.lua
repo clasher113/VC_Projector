@@ -1,18 +1,18 @@
-require "projector:synchronizer"
-require "projector:display"
-require "projector:instance_limit"
-require "projector:config"
-require "projector:rgb_addon"
+local config = require("projector:config")
+local rgb_addon = require("projector:rgb_addon")
+local synchronizer = require("projector:synchronizer")
+local display = require("projector:display")
+local instance_limit = require("projector:instance_limit")
 
 function on_world_open()
-	CONFIG.read()
-	RGB.initialize()
-	SYNC.start_server()
-	DISPLAY.initialize()
-	LIMIT.load()
+	config.read()
+	rgb_addon.initialize()
+	synchronizer.start_server()
+	display.initialize()
+	instance_limit.load()
 end
 
 function on_world_save()
-	SYNC.close_server()
-	LIMIT.save()
+	synchronizer.close_server()
+	instance_limit.save()
 end

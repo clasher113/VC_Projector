@@ -1,3 +1,8 @@
+local config = require("projector:config")
+local display = require("projector:display")
+local rgb_addon = require("projector:rgb_addon")
+local synchronizer = require("projector:synchronizer")
+
 local logs_panel
 local status_label
 local settings_container_1
@@ -19,14 +24,14 @@ local capture_size_y_textbox
 local same_size_checkbox
 local rgb_mode_checkbox
 
-local default_projection_size_x = "180"
-local default_projection_size_y = "120"
-local default_capture_size_x = default_projection_size_x
-local default_capture_size_y = default_projection_size_y
-local default_projection_offset_x = "1"
-local default_projection_offset_y = "0"
-local default_projection_offset_z = "0"
-local default_refresh_rate = 30
+local default_refresh_rate = config.refresh_rate
+local default_projection_size_x = tostring(config.resolution[1])
+local default_projection_size_y = tostring(config.resolution[2])
+local default_capture_size_x = tostring(config.capture_size[1])
+local default_capture_size_y = tostring(config.capture_size[2])
+local default_projection_offset_x = tostring(config.offset[1])
+local default_projection_offset_y = tostring(config.offset[2])
+local default_projection_offset_z = tostring(config.offset[3])
 
 local orientations = {"Vertical", "Horizontal"}
 local axes = {"X", "Z"}
@@ -35,10 +40,10 @@ local logs_num = 1
 local single_time_init = false
 
 function on_game_update()
-	if (SYNC.is_connected()) then
-		if (SYNC.is_capturing) then
+	if (synchronizer.is_connected()) then
+		if (synchronizer.is_capturing) then
 			set_status("Projecting")
-		elseif (SYNC.is_synchronized) then
+		elseif (synchronizer.is_synchronized) then
 			set_status("Ready")
 		else
 			set_status("Connected")
@@ -46,9 +51,9 @@ function on_game_update()
 	else
 		set_status("Waiting for connection")
 	end
-	for k,v in pairs(SYNC.statuses) do
+	for k,v in pairs(synchronizer.statuses) do
 		log_message(v)
-		SYNC.statuses[k] = nil
+		synchronizer.statuses[k] = nil
 	end
 end
 
@@ -80,17 +85,17 @@ function on_open()
 		single_time_init = true
 		settings_container_1:setInterval(1, on_game_update)
 
-		default_refresh_rate = CONFIG.refresh_rate
-		default_projection_size_x = tostring(CONFIG.resolution_x)
-		default_projection_size_y = tostring(CONFIG.resolution_y)
-		default_capture_size_x = tostring(CONFIG.capture_size_x)
-		default_capture_size_y = tostring(CONFIG.capture_size_y)
-		default_projection_offset_x = tostring(CONFIG.offset_x)
-		default_projection_offset_y = tostring(CONFIG.offset_y)
-		default_projection_offset_z = tostring(CONFIG.offset_z)
-		clear_on_stop_checkbox.checked = CONFIG.clear_on_stop
-		CONFIG.orientation = 1
-		CONFIG.axis = 1
+		default_refresh_rate = config.refresh_rate
+		default_projection_size_x = tostring(config.resolution[1])
+		default_projection_size_y = tostring(config.resolution[2])
+		default_capture_size_x = tostring(config.capture_size[1])
+		default_capture_size_y = tostring(config.capture_size[2])
+		default_projection_offset_x = tostring(config.offset[1])
+		default_projection_offset_y = tostring(config.offset[2])
+		default_projection_offset_z = tostring(config.offset[3])
+		clear_on_stop_checkbox.checked = config.clear_on_stop
+		config.orientation = 1
+		config.axis = 1
 
 		-- set default values
 		refresh_rate_trackbar.value = default_refresh_rate
@@ -101,23 +106,23 @@ function on_open()
 		projection_offset_z_textbox.text = default_projection_offset_z
 		capture_size_x_textbox.text = default_capture_size_x
 		capture_size_y_textbox.text = default_capture_size_y
-		orientation_button.text = "Orientation: " .. orientations[CONFIG.orientation]
-		axis_button.text = "Axis: " .. axes[CONFIG.axis]
-		if (RGB.is_loaded() ~= true) then
+		orientation_button.text = "Orientation: " .. orientations[config.orientation]
+		axis_button.text = "Axis: " .. axes[config.axis]
+		if (rgb_addon.is_loaded() ~= true) then
 			rgb_mode_checkbox.enabled = false
 			rgb_mode_checkbox.checked = false
 			settings_container_2:add("<container id='tooltip' color='#00000000' size='" .. rgb_mode_checkbox.size[1] .. "," .. rgb_mode_checkbox.size[2] .."' pos='".. rgb_mode_checkbox.pos[1] .. "," .. rgb_mode_checkbox.pos[2] .. "'></container>")
 			document["tooltip"].tooltip = "RGB addon require"
 			document["tooltip"].tooltipDelay = 0
 		else
-			rgb_mode_checkbox.checked = CONFIG.rgb_mode
+			rgb_mode_checkbox.checked = config.rgb_mode
 		end
 		fps_consumer("")
-		same_size_consumer(CONFIG.same_size)
+		same_size_consumer(config.same_size)
 		init_display()
 
-		SYNC.on_disconnect_callback = function()
-			if (SYNC.is_capturing == true) then
+		synchronizer.on_disconnect_callback = function()
+			if (synchronizer.is_capturing == true) then
 				stop()
 			end
 		end
@@ -147,28 +152,28 @@ end
 
 function stop()
 	set_gui_enabled(true)
-	SYNC.is_capturing = false
+	synchronizer.is_capturing = false
 	main_button.text = "Start"
 	if (clear_on_stop_checkbox.checked == true) then
-		DISPLAY.clear()
+		display.clear()
 	end
 	log_message("Capturing stopped")
 end
 
 function start()
 	set_gui_enabled(false)
-	SYNC.is_capturing = true
+	synchronizer.is_capturing = true
 	main_button.text = "Stop"
 	init_display()
 	log_message("Capturing started")
 end
 
 function main_button_func()
-	if (SYNC.is_synchronized == true and SYNC.is_capturing == false) then
+	if (synchronizer.is_synchronized == true and synchronizer.is_capturing == false) then
 		start()
-	elseif (SYNC.is_capturing  == true) then
+	elseif (synchronizer.is_capturing  == true) then
 		stop()
-	elseif (SYNC.is_synchronized == false) then
+	elseif (synchronizer.is_synchronized == false) then
 		log_message("You must synchronize first")
 	end
 end
@@ -182,29 +187,29 @@ function get_axis_index()
 end
 
 function init_display()
-	CONFIG.refresh_rate = refresh_rate_trackbar.value
-	CONFIG.resolution_x = tonumber(projection_size_x_textbox.text)
-	CONFIG.resolution_y = tonumber(projection_size_y_textbox.text)
-	CONFIG.capture_size_x = tonumber(capture_size_x_textbox.text)
-	CONFIG.capture_size_y = tonumber(capture_size_y_textbox.text)
-	CONFIG.offset_x = tonumber(projection_offset_x_textbox.text)
-	CONFIG.offset_y = tonumber(projection_offset_y_textbox.text)
-	CONFIG.offset_z = tonumber(projection_offset_z_textbox.text)
-	CONFIG.axis = get_axis_index()
-	CONFIG.orientation = get_orientation_index()
-	CONFIG.same_size = same_size_checkbox.checked
-	CONFIG.clear_on_stop = clear_on_stop_checkbox.checked
-	CONFIG.rgb_mode = rgb_mode_checkbox.checked
-	CONFIG.write()
+	config.refresh_rate = refresh_rate_trackbar.value
+	config.resolution[1] = tonumber(projection_size_x_textbox.text)
+	config.resolution[2] = tonumber(projection_size_y_textbox.text)
+	config.capture_size[1] = tonumber(capture_size_x_textbox.text)
+	config.capture_size[2] = tonumber(capture_size_y_textbox.text)
+	config.offset[1] = tonumber(projection_offset_x_textbox.text)
+	config.offset[2] = tonumber(projection_offset_y_textbox.text)
+	config.offset[3] = tonumber(projection_offset_z_textbox.text)
+	config.axis = get_axis_index()
+	config.orientation = get_orientation_index()
+	config.same_size = same_size_checkbox.checked
+	config.clear_on_stop = clear_on_stop_checkbox.checked
+	config.rgb_mode = rgb_mode_checkbox.checked
+	config.write()
 end
 
 function synchronize()
-	if (SYNC.is_connected() == false) then
+	if (synchronizer.is_connected() == false) then
 		log_message("Not connected")
 		return
 	end
 	log_message("Synchronization...")
-	SYNC.is_syncing = true
+	synchronizer.is_syncing = true
 	init_display()
 end
 
@@ -235,74 +240,142 @@ function toggle_axis()
 	axis_button.text = "Axis: " .. axes[index]
 end
 
-function handle_textbox(string, min, max, textbox_id)
-	local number = tonumber(string)
+function fps_consumer(string)
+	refresh_rate_label.text = "Projection refresh rate: " .. tostring(refresh_rate_trackbar.value)
+	synchronizer.is_synchronized = false
+end
+
+local function validate_textbox(input, min, max, textbox)
+	local number = tonumber(input)
+	textbox.tooltipDelay = 0
 	if (number == nil) then
-		log_message(textbox_id .. ": input must be a number")
+		textbox.tooltip = "Input must be a number"
 		return false
 	end
-	if (number > max or number < min) then
-		log_message(textbox_id .. ": the number must be less than " .. tostring(max) .. " and greater than " .. tostring(min))
+	if (number > max) then
+		textbox.tooltip = "Number too big. Possible maximum - " .. tostring(max)
+		return false
+	elseif (number < min) then
+		textbox.tooltip = "Number too low. Required minimum - " .. tostring(min)
 		return false
 	end
+	textbox.tooltip = ""
 	return true
 end
 
-function fps_consumer(string)
-	refresh_rate_label.text = "Projection refresh rate: " .. tostring(refresh_rate_trackbar.value)
-	SYNC.is_synchronized = false
+function projection_size_x_validator(string)
+	return validate_textbox(string, 1, 255, projection_size_x_textbox)
 end
 
 function projection_size_x_consumer(string)
-	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
-		projection_size_x_textbox.text = default_projection_size_x
+	if (projection_size_x_validator(string)) then
+		config.resolution[1] = tonumber(string)
+		if (same_size_checkbox.checked == true) then
+			capture_size_x_consumer(projection_size_x_textbox.text)
+		end
 	end
-	if (same_size_checkbox.checked == true) then
-		capture_size_x_textbox.text = projection_size_x_textbox.text
-	end
-	SYNC.is_synchronized = false
+	synchronizer.is_synchronized = false
+end
+
+function projection_size_x_supplier()
+	local temp = projection_size_x_textbox.valid
+	return tostring(config.resolution[1])
+end
+
+function projection_size_y_validator(string)
+	return validate_textbox(string, 1, 255, projection_size_y_textbox)
 end
 
 function projection_size_y_consumer(string)
-	if (handle_textbox(string, 1, 255, "Projection size X") == false) then
-		projection_size_y_textbox.text = default_projection_size_y
+	if (projection_size_y_validator(string)) then
+		config.resolution[2] = tonumber(string)
+		if (same_size_checkbox.checked == true) then
+			capture_size_y_consumer(projection_size_y_textbox.text)
+		end
 	end
-	if (same_size_checkbox.checked == true) then
-		capture_size_y_textbox.text = projection_size_y_textbox.text
-	end
-	SYNC.is_synchronized = false
+	synchronizer.is_synchronized = false
+end
+
+function projection_size_y_supplier()
+	local temp = projection_size_y_textbox.valid
+	return tostring(config.resolution[2])
+end
+
+function capture_size_x_validator(string)
+	return validate_textbox(string, 1, 1920, capture_size_x_textbox)
 end
 
 function capture_size_x_consumer(string)
-	if (handle_textbox(string, 1, 1920, "Capture size X") == false) then
-		capture_size_x_textbox.text = default_capture_size_x
+	if (capture_size_x_validator(string)) then
+		config.capture_size[1] = tonumber(string)
 	end
-	SYNC.is_synchronized = false
+	synchronizer.is_synchronized = false
+end
+
+function capture_size_x_supplier()
+	local temp = capture_size_x_textbox.valid
+	return tostring(config.capture_size[1])
+end
+
+function capture_size_y_validator(string)
+	return validate_textbox(string, 1, 1080, capture_size_y_textbox)
 end
 
 function capture_size_y_consumer(string)
-	if (handle_textbox(string, 1, 1080, "Capture size Y") == false) then
-		capture_size_y_textbox.text = default_capture_size_y
+	if (capture_size_y_validator(string)) then
+		config.capture_size[2] = tonumber(string)
 	end
-	SYNC.is_synchronized = false
+	synchronizer.is_synchronized = false
+end
+
+function capture_size_y_supplier()
+	local temp = capture_size_y_textbox.valid
+	return tostring(config.capture_size[2])
+end
+
+function projection_offset_x_validator(string)
+	return validate_textbox(string, 1, 255, projection_offset_x_textbox)
 end
 
 function projection_offset_x_consumer(string)
-	if (handle_textbox(string, 1, 255, "Projection offset X") == false) then
-		projection_offset_x_textbox.text = default_projection_offset_x
+	if (projection_offset_x_validator(string)) then
+		config.offset[1] = tonumber(string)
 	end
+end
+
+function projection_offset_x_supplier()
+	local temp = projection_offset_x_textbox.valid
+	return tostring(config.offset[1])
+end
+
+function projection_offset_y_validator(string)
+	return validate_textbox(string, 0, 255, projection_offset_y_textbox)
 end
 
 function projection_offset_y_consumer(string)
-	if (handle_textbox(string, 0, 255, "Projection offset Y") == false) then
-		projection_offset_y_textbox.text = default_projection_offset_y
+	if (projection_offset_y_validator(string)) then
+		config.offset[2] = tonumber(string)
 	end
 end
 
+function projection_offset_y_supplier()
+	local temp = projection_offset_y_textbox.valid
+	return tostring(config.offset[2])
+end
+
+function projection_offset_z_validator(string)
+	return validate_textbox(string, 0, 255, projection_offset_z_textbox)
+end
+
 function projection_offset_z_consumer(string)
-	if (handle_textbox(string, 0, 255, "Projection offset Z") == false) then
-		projection_offset_z_textbox.text = default_projection_offset_z
+	if (projection_offset_z_validator(string)) then
+		config.offset[3] = tonumber(string)
 	end
+end
+
+function projection_offset_z_supplier()
+	local temp = projection_offset_z_textbox.valid
+	return tostring(config.offset[3])
 end
 
 function same_size_consumer(checked)
@@ -310,21 +383,17 @@ function same_size_consumer(checked)
 	capture_size_x_textbox.enabled = (checked == false)
 	capture_size_y_textbox.enabled = (checked == false)
 	if (checked == true) then
-		capture_size_x_textbox.text = projection_size_x_textbox.text
-		capture_size_y_textbox.text = projection_size_y_textbox.text
+		capture_size_x_consumer(projection_size_x_textbox.text)
+		capture_size_y_consumer(projection_size_y_textbox.text)
 	end
 end
 
-function rgb_mode_consumer(checked)
-	
-end
-
 function clear_display()
-	if (SYNC.is_capturing == true) then
+	if (synchronizer.is_capturing == true) then
 		log_message("Does it make sense while the projector is running?")
 	else
 		init_display()
-		DISPLAY.clear()
+		display.clear()
 		log_message("Display cleaned")
 	end
 end

@@ -1,3 +1,7 @@
+local config = require("projector:config")
+local display = require("projector:display")
+local synchronizer = require("projector:synchronizer")
+
 local skeleton = entity.skeleton
 local transform = entity.transform
 
@@ -10,20 +14,20 @@ function on_attacked(attacker, pid)
 end
 
 function on_update(tps)
-	local dst_pos = {DISPLAY.position_x + CONFIG.offset_x, DISPLAY.position_y + CONFIG.offset_y, DISPLAY.position_z + CONFIG.offset_z}
+	local dst_pos = vec3.add(display.position, config.offset)
 	local size = {0, 0, 0}
 
-	if (CONFIG.orientation == 1) then
-		if (CONFIG.axis == 1) then
-			size = {CONFIG.resolution_x, CONFIG.resolution_y, 1.0}
-		elseif (CONFIG.axis == 2) then
-			size = {1.0, CONFIG.resolution_y, CONFIG.resolution_x}
+	if (config.orientation == 1) then
+		if (config.axis == 1) then
+			size = {config.capture_size[1], config.capture_size[2], 1.0}
+		elseif (config.axis == 2) then
+			size = {1.0, config.capture_size[2], config.capture_size[1]}
 		end
-	elseif (CONFIG.orientation == 2) then
-		if (CONFIG.axis == 1) then
-			size = {CONFIG.resolution_x, 1.0, CONFIG.resolution_y}
-		elseif (CONFIG.axis == 2) then
-			size = {CONFIG.resolution_y, 1.0, CONFIG.resolution_x}
+	elseif (config.orientation == 2) then
+		if (config.axis == 1) then
+			size = {config.capture_size[1], 1.0, config.capture_size[2]}
+		elseif (config.axis == 2) then
+			size = {config.capture_size[2], 1.0, config.capture_size[1]}
 		end
 	end
 	dst_pos = vec3.add(dst_pos, vec3.div(size, 2))
@@ -37,7 +41,7 @@ function on_update(tps)
 	matrix = mat4.rotate(matrix, {1, 0, 0}, rotation_y)
 
 	skeleton:set_matrix(projector_bone_index, matrix)
-	if (SYNC.is_capturing == true) then
+	if (synchronizer.is_capturing == true) then
 		matrix = mat4.rotate({1, 0, 0}, time.uptime() % 360 * 50)
 		skeleton:set_matrix(disk_1_bone_index, matrix)
 		skeleton:set_matrix(disk_2_bone_index, matrix)

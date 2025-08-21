@@ -1,5 +1,5 @@
-require "projector:synchronizer"
+local synchronizer = require("projector:synchronizer")
 
 function on_hud_render()
-	SYNC.server_routine()
+	synchronizer.server_routine()
 end

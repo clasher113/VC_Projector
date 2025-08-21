@@ -3,16 +3,23 @@
     <label pos="235,10" id="title">Projector</label>
     <container color="#00000099" id="settings_1" scrollable="0" size="250,240" pos="10,30">
         <label pos="10,10">Projection size in blocks:</label>
-        <textbox id="projection_size_x" pos="10,30" consumer="projection_size_x_consumer" placeholder="Size X" size="110,30"></textbox>
-        <textbox size="110,30" id="projection_size_y" pos="130,30" consumer="projection_size_y_consumer" placeholder="Size Y"></textbox>
-        <label pos="10,70">Projection offset in block:</label>
-        <textbox consumer="projection_offset_x_consumer" pos="10,90" placeholder="Offset X" id="projection_offset_x" size="70,30"></textbox>
-        <textbox id="projection_offset_y" pos="90,90" consumer="projection_offset_y_consumer" placeholder="Offset Y" size="70,30"></textbox>
+        <textbox id="projection_size_x" pos="10,30" size="110,30" consumer="projection_size_x_consumer" 
+				 validator="projection_size_x_validator" supplier="projection_size_x_supplier" placeholder="Size X"></textbox>
+        <textbox id="projection_size_y" pos="130,30" size="110,30" consumer="projection_size_y_consumer" 
+				 validator="projection_size_y_validator" supplier="projection_size_y_supplier" placeholder="Size Y"></textbox>
+        <label pos="10,70">Projection offset in blocks:</label>
+        <textbox id="projection_offset_x" pos="10,90" size="70,30" consumer="projection_offset_x_consumer"
+				 validator="projection_offset_x_validator" supplier="projection_offset_x_supplier" placeholder="Offset X"></textbox>
+        <textbox id="projection_offset_y" pos="90,90" size="70,30" consumer="projection_offset_y_consumer"
+				 validator="projection_offset_y_validator" supplier="projection_offset_y_supplier" placeholder="Offset Y" ></textbox>
+        <textbox id="projection_offset_z" pos="170,90" size="70,30" consumer="projection_offset_z_consumer"
+				 validator="projection_offset_z_validator" supplier="projection_offset_z_supplier" placeholder="Offset Z" ></textbox>
         <label pos="10,130">Capture size in pixels:</label>
 		<checkbox size="250,30" pos="10,150" consumer="same_size_consumer" id="same_size" checked="true">Same as projection size</checkbox>
-        <textbox size="110,30" consumer="capture_size_x_consumer" id="capture_size_x" placeholder="Size X" pos="10,190"></textbox>
-        <textbox size="110,30" consumer="capture_size_y_consumer" pos="130,190" id="capture_size_y" placeholder="Size Y"></textbox>
-        <textbox size="70,30" pos="170,90" consumer="projection_offset_z_consumer" placeholder="Offset Z" id="projection_offset_z"></textbox>
+        <textbox id="capture_size_x" pos="10,190" size="110,30" consumer="capture_size_x_consumer" 
+				 validator="capture_size_x_validator" supplier="capture_size_x_supplier" placeholder="Size X"></textbox>
+        <textbox id="capture_size_y" pos="130,190" size="110,30" consumer="capture_size_y_consumer"
+				 validator="capture_size_y_validator" supplier="capture_size_y_supplier" placeholder="Size Y"></textbox>
     </container>
     <container color="#00000099" id="settings_2" scrollable="0" size="250,240" pos="280,30">
         <label id="refresh_rate_label" pos="10,10">Projection refresh rate: 30</label>

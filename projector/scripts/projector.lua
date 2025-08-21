@@ -1,23 +1,25 @@
+local display = require("projector:display")
+local synchronizer = require("projector:synchronizer")
+local instance_limit = require("projector:instance_limit")
+
 function on_interact(x, y, z, pid)
-    LIMIT.set_position({x, y, z})
+    instance_limit.set_position({x, y, z})
     hud.show_overlay("projector:projector")
-    DISPLAY.position_x = x
-    DISPLAY.position_y = y
-    DISPLAY.position_z = z
+    display.position = { x, y, z }
     return true
 end
 
 function on_placed(x, y, z, playerid)
-    if (SYNC.is_capturing == true) then
+    if (synchronizer.is_capturing == true) then
         block.set(x, y, z, 0, 0)
         return
     end
-    LIMIT.set_position({x, y, z})
+    instance_limit.set_position({x, y, z})
     entities.spawn("projector:projector_entity", {math.floor(x) + 0.5, y + 0.5, math.floor(z) + 0.5})
 end
 
 function on_broken(x, y, z, playerid)
-    if (SYNC.is_capturing == true) then
+    if (synchronizer.is_capturing == true) then
         block.set(x, y, z, block.index("projector:projector"), 0)
         return
     end
@@ -31,5 +33,5 @@ function on_broken(x, y, z, playerid)
             entity:despawn()
         end
     end
-    LIMIT.remove()
+    instance_limit.remove()
 end

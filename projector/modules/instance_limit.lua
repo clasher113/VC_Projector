@@ -1,27 +1,29 @@
-LIMIT = {}
+local data_buffer = require("core:data_buffer")
+
+local instance_limit = {}
 
 local position = nil
 local block_index = block.index("projector:projector")
 local file_path = pack.data_file("projector", "limit") 
 
-LIMIT.set_position = function(pos)
+function instance_limit.set_position(pos)
 	if (pos ~= nil and position ~= nil) then
 		if (position[1] == pos[1] and position[2] == pos[2] and position[3] == pos[3]) then
 			return
 		end
 	end
-	LIMIT.remove()
+	instance_limit.remove()
 	position = pos
 end
 
-LIMIT.remove = function()
-	if (LIMIT.exist()) then
+function instance_limit.remove()
+	if (instance_limit.exist()) then
 		block.destruct(position[1], position[2], position[3])
 	end
 	position = nil
 end
 
-LIMIT.exist = function()
+function instance_limit.exist()
 	if (position ~= nil) then
 		local index = block.get(position[1], position[2], position[3])
 		if (index > 0 and index == block_index) then
@@ -31,7 +33,7 @@ LIMIT.exist = function()
 	return false
 end
 
-LIMIT.load = function()
+function instance_limit.load()
 	if (file.isfile(file_path)) then
 		local buffer = data_buffer()
 		buffer:put_bytes(file.read_bytes(file_path))
@@ -40,7 +42,7 @@ LIMIT.load = function()
 	end
 end
 
-LIMIT.save = function()
+function instance_limit.save()
 	if (position ~= nil) then
 		local buffer = data_buffer()
 		for i=1,3 do
@@ -49,3 +51,5 @@ LIMIT.save = function()
 		file.write_bytes(file_path, buffer:get_bytes())
 	end
 end
+
+return instance_limit

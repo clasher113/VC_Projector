@@ -1,36 +1,39 @@
-CONFIG = {}
-CONFIG.resolution_x = 180
-CONFIG.resolution_y = 120
-CONFIG.capture_size_x = CONFIG.resolution_x
-CONFIG.capture_size_y = CONFIG.resolution_y
-CONFIG.offset_x = 1
-CONFIG.offset_y = 0
-CONFIG.offset_z = 0
-CONFIG.refresh_rate = 30
-CONFIG.orientation = 1
-CONFIG.axis = 1
-CONFIG.same_size = true
-CONFIG.rgb_mode = false
-CONFIG.clear_on_stop = true
+local config = {
+	resolution = { 180, 120 },
+	capture_size = { 180, 120 },
+	offset = { 1, 0, 0 },
+	refresh_rate = 30,
+	orientation = 1,
+	axis = 1,
+	same_size = true,
+	rgb_mode = false,
+	clear_on_stop = true
+}
 
-local is_loaded = false
 local config_file = pack.shared_file("projector", "config")
 
-function CONFIG.read()
+function config.read()
 	if (file.isfile(config_file) == false) then
+		config.write()
 		return
 	end
+	local rewrite = false
 	local temp = bjson.frombytes(file.read_bytes(config_file))
-	for k, v in pairs(temp) do
-		-- print(k .. " = " .. tostring(v))
-		CONFIG[k] = v
+	for k, v in pairs(config) do
+		if (temp[k] ~= nil and type(v) ~= "function" and type(v) == type(temp[k])) then
+			config[k] = temp[k]
+		else
+			rewrite = true
+		end
 	end
-	is_loaded = true
+    if rewrite then
+        config.write()
+    end
 end
 
-function CONFIG.write()
+function config.write()
 	local temp = {}
-	for k, v in pairs(CONFIG) do
+	for k, v in pairs(config) do
 		if (type(v) ~= "function") then
 			temp[k] = v
 		end
@@ -38,6 +41,4 @@ function CONFIG.write()
 	file.write_bytes(config_file, bjson.tobytes(temp))
 end
 
-function CONFIG.is_loaded()
-	return is_loaded
-end
+return config
