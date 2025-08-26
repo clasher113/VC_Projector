@@ -2,10 +2,14 @@ local config = require("projector:config")
 local rgb_addon = require("projector:rgb_addon")
 
 local display = {
-	position = { 0, 0, 0 }
+	position = { 0, 0, 0 },
+	current_framerate = 0,
+	rgb_initialized = false
 }
 
 local blocks_indices = {}
+local framerate_time = time.uptime()
+local framerate = 0
 
 function display.initialize()
 	for i=0, 15 do
@@ -23,9 +27,20 @@ local function get_mohochrome_block(pixels, index)
 end
 
 function display.update(pixels)
+	local uptime = time.uptime()
+	if (uptime > framerate_time) then
+		framerate_time = uptime + 1
+		display.current_framerate = framerate
+		framerate = 0
+	end
+	framerate = framerate + 1
+
 	local step = (config.rgb_mode == true and 2 or 1)
 	local start_pos = vec3.add(display.position, config.offset)
 	local end_pos = { start_pos[1] + config.resolution[1] - 1, start_pos[2] + config.resolution[2] - 1,  start_pos[3] + config.resolution[1] - 1 }
+
+	--local fragment = generation.create_fragment(start_pos, vec3.add(start_pos, {160, 90, 1}), false)
+	--fragment:place(vec3.add(start_pos, {0, 0, 20}), 0)
 
 	local i = 1
 

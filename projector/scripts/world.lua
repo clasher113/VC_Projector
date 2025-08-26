@@ -7,9 +7,9 @@ local instance_limit = require("projector:instance_limit")
 function on_world_open()
 	config.read()
 	rgb_addon.initialize()
-	synchronizer.start_server()
 	display.initialize()
 	instance_limit.load()
+	synchronizer.start_server()
 end
 
 function on_world_save()

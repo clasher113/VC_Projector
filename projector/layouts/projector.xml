@@ -1,38 +1,44 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<container scrollable="0" size="540,640" color="#888888cc">
+<container id="root" scrollable="0" size="540,620" color="#888888cc">
     <label pos="235,10" id="title">Projector</label>
     <container color="#00000099" id="settings_1" scrollable="0" size="250,240" pos="10,30">
         <label pos="10,10">Projection size in blocks:</label>
         <textbox id="projection_size_x" pos="10,30" size="110,30" consumer="projection_size_x_consumer" 
-				 validator="projection_size_x_validator" supplier="projection_size_x_supplier" placeholder="Size X"></textbox>
+				 validator="projection_size_x_validator" supplier="projection_size_x_supplier" placeholder="Size X"/>
         <textbox id="projection_size_y" pos="130,30" size="110,30" consumer="projection_size_y_consumer" 
-				 validator="projection_size_y_validator" supplier="projection_size_y_supplier" placeholder="Size Y"></textbox>
+				 validator="projection_size_y_validator" supplier="projection_size_y_supplier" placeholder="Size Y"/>
         <label pos="10,70">Projection offset in blocks:</label>
         <textbox id="projection_offset_x" pos="10,90" size="70,30" consumer="projection_offset_x_consumer"
-				 validator="projection_offset_x_validator" supplier="projection_offset_x_supplier" placeholder="Offset X"></textbox>
+				 validator="projection_offset_x_validator" supplier="projection_offset_x_supplier" placeholder="Offset X"/>
         <textbox id="projection_offset_y" pos="90,90" size="70,30" consumer="projection_offset_y_consumer"
-				 validator="projection_offset_y_validator" supplier="projection_offset_y_supplier" placeholder="Offset Y" ></textbox>
+				 validator="projection_offset_y_validator" supplier="projection_offset_y_supplier" placeholder="Offset Y"/>
         <textbox id="projection_offset_z" pos="170,90" size="70,30" consumer="projection_offset_z_consumer"
-				 validator="projection_offset_z_validator" supplier="projection_offset_z_supplier" placeholder="Offset Z" ></textbox>
+				 validator="projection_offset_z_validator" supplier="projection_offset_z_supplier" placeholder="Offset Z"/>
         <label pos="10,130">Capture size in pixels:</label>
-		<checkbox size="250,30" pos="10,150" consumer="same_size_consumer" id="same_size" checked="true">Same as projection size</checkbox>
+		<checkbox id="same_size" pos="10,150" size="250,30" consumer="same_size_consumer">Same as projection size</checkbox>
         <textbox id="capture_size_x" pos="10,190" size="110,30" consumer="capture_size_x_consumer" 
-				 validator="capture_size_x_validator" supplier="capture_size_x_supplier" placeholder="Size X"></textbox>
+				 validator="capture_size_x_validator" supplier="capture_size_x_supplier" placeholder="Size X"/>
         <textbox id="capture_size_y" pos="130,190" size="110,30" consumer="capture_size_y_consumer"
-				 validator="capture_size_y_validator" supplier="capture_size_y_supplier" placeholder="Size Y"></textbox>
+				 validator="capture_size_y_validator" supplier="capture_size_y_supplier" placeholder="Size Y"/>
     </container>
     <container color="#00000099" id="settings_2" scrollable="0" size="250,240" pos="280,30">
-        <label id="refresh_rate_label" pos="10,10">Projection refresh rate: 30</label>
-        <trackbar id="refresh_rate" min="1" pos="10,30" consumer="fps_consumer" max="60" value="30" size="230,30"/>
-        <checkbox size="200,30" pos="10,70" id="clear_on_stop" checked="true">Clear on stop</checkbox>
-        <button onclick="toggle_axis()" id="axis" size="230,30" pos="10,150">Axis: X</button>
-        <button onclick="toggle_orientation()" id="orientation" size="230,30" pos="10,110">Orientation: Vertical</button>
-		<checkbox size="250,30" pos="10,190" id="rgb_mode" checked="false">Use RGB mode</checkbox>
+        <label id="refresh_rate_label" pos="10,10"/>
+        <trackbar id="refresh_rate_trackbar" pos="10,30" size="230,30" min="1" max="60" consumer="fps_consumer" supplier="fps_supplier"/>
+        <checkbox pos="10,70" size="200,30" consumer="clear_on_stop_consumer" supplier="clear_on_stop_supplier">Clear on stop</checkbox>
+        <button id="axis" pos="10,150" size="230,30" onclick="toggle_axis()"/>
+        <button id="orientation" pos="10,110" size="230,30" onclick="toggle_orientation()"/>
+		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">Use RGB mode</checkbox>
 	</container>
-    <panel pos="10,440" max-length="190" id="logs" size="520,190"/>
-    <button id="main_button" onclick="main_button_func()" pos="10,340" size="520,30">Start</button>
-    <label pos="10,420">Logs:</label>
-    <label id="status" pos="10,280">Status:</label>
-    <button onclick="synchronize()" id="sync" size="520,30" pos="10,300">Synchronize</button>
-    <button id="clear" onclick="clear_display()" size="520,30" pos="10,380">Clear area</button>
+	<container pos="550,30" color="#00000099" scrollable="0" size="250, 580">
+		<checkbox id="bytearray" pos="10, 10" size="250, 30" consumer="bytearray_consumer">Use ByteArray</checkbox>
+		<checkbox enabled="false" pos="10, 40" size="250, 30">Use fragment:place() instead of block.set()</checkbox>
+	</container>
+    <label pos="10,280" supplier="status_supplier"/>    
+	<label pos="10, 300" supplier="framerate_supplier"/>
+	<button id="experimental_settings" pos="330, 280" size="200, 30" onclick="toggle_experimental_settings()"/>
+    <button id="sync" pos="10,320" size="520,30" onclick="synchronize()">Synchronize</button>
+    <button id="main_button" pos="10,360" size="520,30" onclick="main_button_func()">Start</button>
+    <button id="clear" pos="10,400" size="520,30" onclick="clear_display()">Clear area</button>
+    <label pos="10,440">Logs:</label>
+    <panel id="logs" pos="10,460" size="520,150" max-length="150" min-length="150" supplier="log_message"/>
 </container>
