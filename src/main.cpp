@@ -32,7 +32,8 @@ enum BitMask : uint32_t {
 	NONE = 0x0,
 	PING_PONG = 0x1,
 	SYNC = 0x2,
-	CAPTURE = 0x4
+	CAPTURE = 0x4,
+	INIT = 0x8
 };
 
 bool synchonized = false;
@@ -288,6 +289,50 @@ int main() {
 					const uint32_t pixelsSize = static_cast<uint32_t>(convertedPixels.size());
 					packData(outPacket, REFNSIZE(pixelsSize), packOffset);
 					packData(outPacket, convertedPixels.data(), pixelsSize, packOffset);
+				}
+			}
+			if (unpackBitmask & BitMask::INIT) {
+				packBitmask |= BitMask::INIT;
+
+				uint8_t init = 1;
+
+				uint32_t size = 0;
+				unpackData(inBuffer, REFNSIZE(size), unpackOffset);
+
+				std::vector<uint8_t> texturesData(size);
+				unpackData(inBuffer, texturesData.data(), size, unpackOffset);
+
+				std::vector<uint8_t> colors;
+
+				uint32_t texturesDataOffset = 0;
+				while(texturesDataOffset < size){
+					uint32_t textureSize = 0;
+					unpackData(texturesData.data(), REFNSIZE(textureSize), texturesDataOffset);
+
+					std::vector<uint8_t> texture(textureSize);
+					unpackData(texturesData.data(), texture.data(), textureSize, texturesDataOffset);
+
+					sf::Image image;
+					if (image.loadFromMemory(texture.data(), textureSize) == false){
+						init = 0;
+						break;
+					}
+					uint64_t color[4] = {};
+					for (size_t i = 0; i < image.getSize().x * image.getSize().y * 4; i += 4) {
+						for (size_t j = 0; j < 4; j++) {
+							color[j] += image.getPixelsPtr()[i + j];
+						}
+					}
+					for (size_t i = 0; i < 4; i++) {
+						colors.emplace_back(color[i] / (image.getSize().x * image.getSize().y));
+					}
+				}
+
+				packData(outPacket, REFNSIZE(init), packOffset);
+				if (init){
+					uint32_t arrSize = colors.size();
+					packData(outPacket, REFNSIZE(arrSize), packOffset);
+					packData(outPacket, colors.data(), colors.size(), packOffset);
 				}
 			}
 			{
