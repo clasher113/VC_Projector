@@ -1,40 +1,13 @@
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
-#include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include <SFML/System/Sleep.hpp>
+#include <SFML/Window/Event.hpp>
 
-#ifdef _WIN32
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#pragma comment(lib, "winmm.lib")
-#pragma comment(lib, "Dwmapi.lib")
-#pragma comment(lib, "Ws2_32.lib")
-#include <dwmapi.h>
-#elif __linux__
-#include <X11/Xlib.h>
-#include <X11/extensions/shape.h>
-#undef Status
-#undef None
-#endif // _WIN32
-
-#include "font_binary.hpp"
-
-enum class Status {
-	WAITING = 1,
-	CONNECTED,
-	SYNCING,
-	READY,
-	CAPTURING
-};
-
-enum BitMask : uint32_t {
-	NONE = 0x0,
-	PING_PONG = 0x1,
-	SYNC = 0x2,
-	CAPTURE = 0x4,
-	INIT = 0x8
-};
+#include "Window.hpp"
+#include "Enum.hpp"
 
 bool synchonized = false;
 uint32_t lastBitmask = BitMask::NONE;
@@ -44,123 +17,24 @@ uint16_t displayResolutionY = 120;
 uint16_t displayReadSizeX = displayResolutionX;
 uint16_t displayReadSizeY = displayResolutionY;
 
-const sf::Vector2u statusContainerSize(200, 30);
 const char* REMOTE_ADDRESS = "127.0.0.1";
 const unsigned short REMOTE_PORT = 6969;
 constexpr uint32_t RECEIVE_MAX_SIZE = 1024 * 1024;
 const uint32_t PROTOCOL_MAGIC = 0xAAFFFAA;
-const float SYNC_TIMEOUT = 1.f;
-const float BORDER_THICKNESS = 3.f;
-
-static void setWindowSize(sf::RenderWindow& window, const sf::Vector2u& size);
-static void updateBorder(sf::RectangleShape& border);
-static void updateStatusSprite(sf::Sprite& sprite);
-static void setStatus(sf::Text& statusText, Status& currentStatus, Status newStatus);
-static sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& buffer, size_t& received);
-static void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size);
 
 #define REFNSIZE(VALUE) &VALUE, sizeof(VALUE)
 
+static sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& buffer, size_t& received);
+static void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size);
 static void unpackData(const void* src, void* dst, uint32_t size, uint32_t& offset);
 static void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_t& offset);
 
 int main() {
 
-#ifdef _WIN32
-	sf::RenderWindow window(sf::VideoMode(320, 240), "Projector server", sf::Style::None);
-#elif __linux__
-	// make x11 window with transparent background
-	Display* display = XOpenDisplay(NULL);
-
-	XVisualInfo vinfo;
-	XMatchVisualInfo(display, DefaultScreen(display), 32, TrueColor, &vinfo);
-
-	XSetWindowAttributes attr;
-	attr.colormap = XCreateColormap(display, DefaultRootWindow(display), vinfo.visual, AllocNone);
-	attr.border_pixel = 0;
-	attr.background_pixel = 0;
-
-	Window win = XCreateWindow(display, DefaultRootWindow(display), 0, 0, 300, 200, 0, vinfo.depth, InputOutput, vinfo.visual, CWColormap | CWBorderPixel | CWBackPixel, &attr);
-	XSelectInput(display, win, StructureNotifyMask);
-	GC gc = XCreateGC(display, win, 0, 0);
-
-	Atom wmDeleteWindow = XInternAtom(display, "WM_DELETE_WINDOW", 0);
-
-	// disable window decorations
-	Atom mwmHintsProperty = XInternAtom(display, "_MOTIF_WM_HINTS", 0);
-
-	struct MwmHints {
-		unsigned long flags{};
-		unsigned long functions{};
-		unsigned long decorations{};
-		long input_mode{};
-		unsigned long status{};
-	};
-
-	struct MwmHints hints;
-	hints.flags = (1L << 1);
-	hints.decorations = 0;
-	XChangeProperty(display, win, mwmHintsProperty, mwmHintsProperty, 32, PropModeReplace, (unsigned char*)&hints, 5);
-
-	XSetWMProtocols(display, win, &wmDeleteWindow, 1);
-	XMapWindow(display, win);
-
-	sf::RenderWindow window(win);
-#endif // _WIN32
-	window.setFramerateLimit(framerate);
-	setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
-	sf::Color* pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
-
-#ifdef _WIN32
-	MARGINS margins{};
-	margins.cxLeftWidth = -1;
-
-	// enable window transparency
-	SetWindowLong(window.getSystemHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
-	DwmExtendFrameIntoClientArea(window.getSystemHandle(), &margins);
-	// make window always on top
-	SetWindowPos(window.getSystemHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-
-	HWND desktop = GetDesktopWindow();
-	HDC desktopHdc = GetDC(desktop);
-	HDC hCaptureDC = CreateCompatibleDC(desktopHdc);
-	HBITMAP hCaptureBitmap = CreateCompatibleBitmap(desktopHdc, displayReadSizeX, displayReadSizeY);
-	SelectObject(hCaptureDC, hCaptureBitmap);
-
-	BITMAPINFO bmi{};
-	bmi.bmiHeader.biBitCount = 32;
-	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biHeight = displayReadSizeY;
-	bmi.bmiHeader.biWidth = displayReadSizeX;
-	bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
-#elif __linux__
-	Window root = DefaultRootWindow(display);
-
-	XWindowAttributes attributes = { 0 };
-	XGetWindowAttributes(display, root, &attributes);
-#endif // _WIN32
+	vcp::Window window(sf::Vector2u(displayReadSizeX, displayReadSizeY));
 
 	Status currentStatus = Status::WAITING;
-
-	sf::RectangleShape border;
-	border.setFillColor(sf::Color::Transparent);
-	border.setOutlineColor(sf::Color::Yellow);
-	border.setOutlineThickness(BORDER_THICKNESS);
-	border.setPosition(sf::Vector2f(BORDER_THICKNESS, BORDER_THICKNESS));
-	updateBorder(border);
-
-	sf::Font font;
-	font.loadFromMemory(font_binary::getData(), font_binary::getSize());
-
-	sf::Text statusText("", font, 20U);
-	setStatus(statusText, currentStatus, currentStatus);
-
-	sf::RenderTexture statusContainer;
-	statusContainer.create(statusContainerSize.x, statusContainerSize.y);
-
-	sf::Sprite statusContainerSprite(statusContainer.getTexture());
-	updateStatusSprite(statusContainerSprite);
+	window.setStatus(currentStatus);
 
 	sf::TcpSocket socket;
 
@@ -175,6 +49,7 @@ int main() {
 
 	while (window.isOpen()) {
 		const float delta = clock.restart().asSeconds();
+		sf::sleep(sf::seconds((1.f / framerate) - delta));
 
 		outPackets.clear();
 		if (currentStatus != Status::WAITING) {
@@ -182,7 +57,7 @@ int main() {
 			size_t received = 0;
 			do {
 				if (receiveMessage(socket, inPacket, received) == sf::Socket::Status::Disconnected) {
-					setStatus(statusText, currentStatus, Status::WAITING);
+					window.setStatus(currentStatus = Status::WAITING);
 					socket.setBlocking(true);
 					std::cout << "Server disconnected" << std::endl;
 					break;
@@ -205,7 +80,7 @@ int main() {
 			unpackData(inBuffer, REFNSIZE(ping), unpackOffset);
 			if (ping == 0) {
 				std::cout << "Connection reset by server" << std::endl;
-				setStatus(statusText, currentStatus, Status::WAITING);
+				window.setStatus(currentStatus = Status::WAITING);
 				socket.setBlocking(true);
 				break;
 			}
@@ -219,24 +94,13 @@ int main() {
 				unpackData(inBuffer, REFNSIZE(displayReadSizeX), unpackOffset);
 				unpackData(inBuffer, REFNSIZE(displayReadSizeY), unpackOffset);
 
-				window.setFramerateLimit(framerate);
-				setWindowSize(window, sf::Vector2u(displayReadSizeX, displayReadSizeY));
-				updateBorder(border);
-				updateStatusSprite(statusContainerSprite);
-#ifdef _WIN32
-				bmi.bmiHeader.biWidth = displayReadSizeX;
-				bmi.bmiHeader.biHeight = displayReadSizeY;
-
-				hCaptureBitmap = CreateCompatibleBitmap(desktopHdc, displayReadSizeX, displayReadSizeY);
-				SelectObject(hCaptureDC, hCaptureBitmap);
-#endif // _WIN32
-				delete[] pixels;
-				pixels = new sf::Color[displayReadSizeX * displayReadSizeY];
+				framerate = std::clamp(framerate, static_cast<uint16_t>(30), static_cast<uint16_t>(60));
+				window.setSize(sf::Vector2u(displayReadSizeX, displayReadSizeY));
 
 				uint8_t sync = 1;
 				packData(outPacket, REFNSIZE(sync), packOffset);
-				//justSyncked = true;
-				setStatus(statusText, currentStatus, Status::READY);
+
+				window.setStatus(currentStatus = Status::READY);
 				synchonized = true;
 			}
 			if (unpackBitmask & BitMask::CAPTURE) {
@@ -247,26 +111,14 @@ int main() {
 				unpackData(inBuffer, REFNSIZE(rgbMode), unpackOffset);
 
 				if (capture && currentStatus == Status::READY) {
-					setStatus(statusText, currentStatus, Status::CAPTURING);
+					window.setStatus(currentStatus = Status::CAPTURING);
 				}
 
 				capture = currentStatus == Status::CAPTURING;
 				packData(outPacket, REFNSIZE(capture), packOffset);
 				if (capture) {
-#ifdef _WIN32
-					BitBlt(hCaptureDC, 0, 0, displayReadSizeX, displayReadSizeY, desktopHdc, 
-						static_cast<int>(window.getPosition().x + BORDER_THICKNESS), static_cast<int>(window.getPosition().y + BORDER_THICKNESS), SRCCOPY);
-					GetDIBits(hCaptureDC, hCaptureBitmap, 0, displayReadSizeY, &pixels[0], &bmi, DIB_RGB_COLORS);
-#elif __linux__
-					XImage* img = XGetImage(display, root, window.getPosition().x + BORDER_THICKNESS, window.getPosition().y + BORDER_THICKNESS, displayReadSizeX, displayReadSizeY, AllPlanes, ZPixmap);
-					unsigned int location = (displayReadSizeY - 1) * (displayReadSizeX * 4);
-					for (int i = 0; i < displayReadSizeY; ++i) {
-						memcpy(&pixels[i * (displayReadSizeX)], &img->data[location], displayReadSizeX * 4);
-						location -= displayReadSizeX * 4;
-					}
+					sf::Color* pixels = window.capture();
 
-					XDestroyImage(img);
-#endif // _WIN32
 					std::vector<uint8_t> convertedPixels;
 					convertedPixels.reserve(displayResolutionX * displayResolutionY * (rgbMode ? 3 : 1));
 
@@ -345,7 +197,7 @@ int main() {
 			if (lastBitmask != unpackBitmask) {
 				lastBitmask = unpackBitmask;
 				if (synchonized && !(lastBitmask & BitMask::CAPTURE)) {
-					setStatus(statusText, currentStatus, Status::READY);
+					window.setStatus(currentStatus = Status::READY);
 				}
 			}
 		}
@@ -359,7 +211,7 @@ int main() {
 				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01f)) == sf::Socket::Status::Done) {
 					std::cout << "Connected to the server" << std::endl;
 					synchonized = false;
-					setStatus(statusText, currentStatus, Status::CONNECTED);
+					window.setStatus(currentStatus = Status::CONNECTED);
 					socket.setBlocking(false);
 				}
 			}
@@ -368,9 +220,7 @@ int main() {
 		if (grabbedWindow) grabbedWindow = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 		sf::Event e;
 		while (window.pollEvent(e)) {
-			if (e.type == sf::Event::Closed)
-				window.close();
-			else if (e.type == sf::Event::MouseButtonPressed) {
+			if (e.type == sf::Event::MouseButtonPressed) {
 				if (e.mouseButton.button == sf::Mouse::Left) {
 					grabbedOffset = window.getPosition() - sf::Mouse::getPosition();
 					grabbedWindow = true;
@@ -387,51 +237,13 @@ int main() {
 					window.setPosition(sf::Mouse::getPosition() + grabbedOffset);
 			}
 		}
-
-		statusContainer.clear(sf::Color::Black);
-		statusContainer.draw(statusText);
-		statusContainer.display();
-
-		window.clear(sf::Color::Transparent);
-		window.draw(border);
-		window.draw(statusContainerSprite);
-		window.display();
+		window.draw();
 	}
 	if (currentStatus != Status::WAITING) {
 		socket.disconnect();
 	}
 
-	delete[] pixels;
-
 	return 0;
-}
-
-void setWindowSize(sf::RenderWindow& window, const sf::Vector2u& size) {
-	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), statusContainerSize.x),
-							   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + statusContainerSize.y);
-	window.setSize(newSize);
-	window.setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
-}
-
-void updateBorder(sf::RectangleShape& border) {
-	border.setSize(sf::Vector2f(displayReadSizeX, displayReadSizeY));
-}
-
-void updateStatusSprite(sf::Sprite& sprite) {
-	sprite.setPosition(sf::Vector2f(0.f, displayReadSizeY + BORDER_THICKNESS * 2));
-}
-
-void setStatus(sf::Text& statusText, Status& currentStatus, Status newStatus) {
-	currentStatus = newStatus;
-	std::string statusStr;
-	switch (currentStatus) {
-		case Status::WAITING: statusStr = "Waiting for VC"; break;
-		case Status::CONNECTED: statusStr = "Connected"; break;
-		case Status::SYNCING: statusStr = "Syncing"; break;
-		case Status::READY: statusStr = "Ready"; break;
-		case Status::CAPTURING: statusStr = "Capturing"; break;
-	}
-	statusText.setString("Status: " + statusStr);
 }
 
 static void cleanUpSocket(sf::TcpSocket& socket) {
@@ -441,7 +253,6 @@ static void cleanUpSocket(sf::TcpSocket& socket) {
 	do {
 		socket.receive(buffer, sizeof(buffer), received);
 	} while (received);
-
 }
 
 sf::Socket::Status receiveMessage(sf::TcpSocket& socket, std::vector<uint8_t>& buffer, size_t& received) {
@@ -540,6 +351,9 @@ void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_
 // if bitmask has capture bit: 
 // 1 byte capture require
 // 1 byte rgb mode enabled
+// if bitmask has init bit:
+// 4 bytes textures data size
+// n bytes textures data
 
 // out packet scheme
 // 4 bytes bitmask
@@ -549,3 +363,7 @@ void packData(std::vector<uint8_t>& dst, const void* src, uint32_t size, uint32_
 // if bitmask has capture bit: 
 // 4 bytes of pixels size
 // n bytes of pixels data
+// if bitmask has init bit:
+// 1 byte init status
+// 4 bytes textures colors data size
+// n bytes textures colors data
