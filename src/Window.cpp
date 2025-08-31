@@ -8,6 +8,7 @@
 #pragma comment(lib, "Dwmapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #elif __linux__
+#include <sys/shm.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/shape.h>
 #endif // _WIN32
@@ -16,10 +17,10 @@ const float BORDER_THICKNESS = 3.f;
 const sf::Vector2u statusContainerSize(200, 30);
 
 vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
-	m_captureSize(captureSize)
+	m_captureSize(0, 0)
 {
 #ifdef _WIN32
-	sf::RenderWindow::create(sf::VideoMode(320, 240), "Projector server", sf::Style::None);
+	sf::RenderWindow::create(sf::VideoMode(320, 240), "", sf::Style::None);
 
 	MARGINS margins{};
 	margins.cxLeftWidth = -1;
@@ -34,7 +35,7 @@ vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
 	m_desktopHdc = GetDC(desktop);
 	m_hCaptureDC = CreateCompatibleDC(m_desktopHdc);
 	m_hCaptureBitmap = CreateCompatibleBitmap(m_desktopHdc, captureSize.x, captureSize.y);
-	SelectObject(m_hCaptureDC, m_hCaptureBitmap);
+	m_hOldBitmap = SelectObject(m_hCaptureDC, m_hCaptureBitmap);
 
 	m_bmi.bmiHeader.biBitCount = 32;
 	m_bmi.bmiHeader.biCompression = BI_RGB;
@@ -75,22 +76,14 @@ vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
 	hints.flags = (1L << 1);
 	hints.decorations = 0;
 	XChangeProperty(m_p_display, m_window, mwmHintsProperty, mwmHintsProperty, 32, PropModeReplace, (unsigned char*)&hints, 5);
-
-	Atom opacityAtom = XInternAtom(m_p_display, "_NET_WM_WINDOW_OPACITY", 0);
-	uint32_t opacityValue = (uint32_t)(0.5 * 0xFFFFFFFF);
-	XChangeProperty(m_p_display, m_window, opacityAtom, XA_CARDINAL, 32, PropModeReplace, (unsigned char *)&opacityValue, 1);
-
 	XSetWMProtocols(m_p_display, m_window, &wmDeleteWindow, 1);
-	XMapWindow(m_p_display, m_window);
 
 	sf::RenderWindow::create(m_window);
 
 	m_rootWindow = DefaultRootWindow(m_p_display);
-
-	XWindowAttributes attributes = { 0 };
-	XGetWindowAttributes(m_p_display, m_rootWindow, &attributes);
 #endif // _WIN32
-
+	
+	setTitle("Projector server");
 	setSize(captureSize);
 
 	m_statusContainer.create(statusContainerSize.x, statusContainerSize.y);
@@ -110,10 +103,26 @@ vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
 }
 
 vcp::Window::~Window() {
+#ifdef _WIN32
+	SelectObject(m_hCaptureDC, m_hOldBitmap);
+	DeleteObject(m_hCaptureBitmap);
+	DeleteDC(m_hCaptureDC);
+	ReleaseDC(NULL, m_desktopHdc);
+#elif __linux__
+	if (m_p_ShmInfo) {
+		shmdt(m_p_ShmInfo->shmaddr);
+		//shmctl(m_p_ShmInfo->shmid, IPC_RMID, 0);
+		XShmDetach(m_p_display, m_p_ShmInfo);
+		delete m_p_ShmInfo;
+	}
+	if (m_p_xImage) XDestroyImage(m_p_xImage);
+	if (m_p_display) XCloseDisplay(m_p_display);
+#endif // _WIN32
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
 }
 
 void vcp::Window::setSize(const sf::Vector2u& size) {
+	if (size == m_captureSize) return;
 	m_captureSize = size;
 	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), statusContainerSize.x),
 						   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + statusContainerSize.y);
@@ -128,6 +137,20 @@ void vcp::Window::setSize(const sf::Vector2u& size) {
 
 	m_hCaptureBitmap = CreateCompatibleBitmap(m_desktopHdc, size.x, size.y);
 	SelectObject(m_hCaptureDC, m_hCaptureBitmap);
+#elif __linux__
+	if (m_p_xImage) XDestroyImage(m_p_xImage);
+	if (m_p_ShmInfo == nullptr) m_p_ShmInfo = new XShmSegmentInfo;
+
+	int scr = XDefaultScreen(m_p_display);
+
+	m_p_xImage = XShmCreateImage(m_p_display, DefaultVisual(m_p_display, scr), DefaultDepth(m_p_display, scr), ZPixmap,
+		NULL, m_p_ShmInfo, m_captureSize.x, m_captureSize.y);
+
+	m_p_ShmInfo->shmid = shmget(IPC_PRIVATE, m_p_xImage->bytes_per_line * m_p_xImage->height, IPC_CREAT | 0777);
+	m_p_ShmInfo->readOnly = False;
+	m_p_ShmInfo->shmaddr = m_p_xImage->data = (char*)shmat(m_p_ShmInfo->shmid, 0, 0);
+
+	XShmAttach (m_p_display, m_p_ShmInfo);	
 #endif // _WIN32
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
 	m_p_pixels = new sf::Color[size.x * size.y];
@@ -158,15 +181,12 @@ sf::Color* vcp::Window::capture() {
 		static_cast<int>(getPosition().x + BORDER_THICKNESS), static_cast<int>(getPosition().y + BORDER_THICKNESS), SRCCOPY);
 	GetDIBits(m_hCaptureDC, m_hCaptureBitmap, 0, m_captureSize.y, &m_p_pixels[0], &m_bmi, DIB_RGB_COLORS);
 #elif __linux__
-	XImage* img = XGetImage(m_p_display, m_rootWindow, getPosition().x + BORDER_THICKNESS, getPosition().y + BORDER_THICKNESS, 
-		m_captureSize.x, m_captureSize.y, AllPlanes, ZPixmap);
+	XShmGetImage(m_p_display, m_rootWindow, m_p_xImage, getPosition().x + BORDER_THICKNESS, getPosition().y + BORDER_THICKNESS, AllPlanes);
 	unsigned int location = (m_captureSize.y - 1) * (m_captureSize.x * 4);
 	for (int i = 0; i < m_captureSize.y; ++i) {
-		memcpy(&m_p_pixels[i * (m_captureSize.x)], &img->data[location], m_captureSize.x * 4);
+		memcpy(&m_p_pixels[i * (m_captureSize.x)], &m_p_xImage->data[location], m_captureSize.x * 4);
 		location -= m_captureSize.x * 4;
 	}
-
-	XDestroyImage(img);
 #endif // _WIN32
 	return m_p_pixels;
 }

@@ -49,7 +49,8 @@ int main() {
 
 	while (window.isOpen()) {
 		const float delta = clock.restart().asSeconds();
-		sf::sleep(sf::seconds((1.f / framerate) - delta));
+		float sleepDuration = (1.f / framerate) - delta;
+		if (sleepDuration > 0) sf::sleep(sf::seconds(sleepDuration));
 
 		outPackets.clear();
 		if (currentStatus != Status::WAITING) {
