@@ -8,7 +8,7 @@ local config = {
 	same_size = true,
 	rgb_mode = false,
 	clear_on_stop = true,
-	use_bytearray = false
+	use_bytearray = true
 }
 
 local config_file = pack.shared_file("projector", "config")

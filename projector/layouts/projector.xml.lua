@@ -28,7 +28,7 @@ function on_gui_render()
 		size[1] = math.max(540, size[1] - anim_speed * time.delta())
 	end
 	document["root"].size = size
-	if (config.rgb_mode and display.rgb_initialized == false) then
+	if (rgb_addon.is_loaded() == false and config.rgb_mode and display.rgb_initialized == false) then
 		rgb_consumer(true)
 	end
 end
@@ -136,7 +136,7 @@ function fps_consumer(string)
 	local new_refresh_rate = tonumber(string)	
 	if (config.refresh_rate == new_refresh_rate) then return end
 	config.refresh_rate = new_refresh_rate
-	synchronizer.set_status(util.synchronizer_status.CONNECTED)
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
 end
 
 function fps_supplier()
@@ -146,8 +146,8 @@ end
 
 function rgb_consumer(checked)
 	config.rgb_mode = checked
-	if ((synchronizer.get_status() == util.synchronizer_status.CONNECTED or 
-		synchronizer.get_status() == util.synchronizer_status.CONNECTED) and display.rgb_initialized == false) then
+	if (rgb_addon.is_loaded() == false and (synchronizer.get_status() == util.synchronizer_status.CONNECTED or 
+		synchronizer.get_status() == util.synchronizer_status.READY) and display.rgb_initialized == false) then
 		log_message("Initializing")
 		synchronizer.set_status(util.synchronizer_status.INIT)
 	end
@@ -185,7 +185,7 @@ function projection_size_x_consumer(string)
 	if (config.same_size == true) then
 		capture_size_x_consumer(string)
 	end
-	synchronizer.set_status(util.synchronizer_status.CONNECTED)
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
 end
 
 function projection_size_x_supplier()
@@ -203,7 +203,7 @@ function projection_size_y_consumer(string)
 	if (config.same_size == true) then
 		capture_size_y_consumer(string)
 	end
-	synchronizer.set_status(util.synchronizer_status.CONNECTED)
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
 end
 
 function projection_size_y_supplier()
@@ -218,7 +218,7 @@ end
 function capture_size_x_consumer(string)
 	if (not capture_size_x_validator(string)) then return end
 	config.capture_size[1] = tonumber(string)
-	synchronizer.set_status(util.synchronizer_status.CONNECTED)
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
 end
 
 function capture_size_x_supplier()
@@ -233,7 +233,7 @@ end
 function capture_size_y_consumer(string)
 	if (not capture_size_y_validator(string)) then return end
 	config.capture_size[2] = tonumber(string)
-	synchronizer.set_status(util.synchronizer_status.CONNECTED)
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
 end
 
 function capture_size_y_supplier()

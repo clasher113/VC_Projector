@@ -1,6 +1,7 @@
 local config = require("projector:config")
 local display = require("projector:display")
 local synchronizer = require("projector:synchronizer")
+local util = require("projector:util")
 
 local skeleton = entity.skeleton
 local transform = entity.transform
@@ -41,7 +42,7 @@ function on_update(tps)
 	matrix = mat4.rotate(matrix, {1, 0, 0}, rotation_y)
 
 	skeleton:set_matrix(projector_bone_index, matrix)
-	if (synchronizer.is_capturing == true) then
+	if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 		matrix = mat4.rotate({1, 0, 0}, time.uptime() % 360 * 50)
 		skeleton:set_matrix(disk_1_bone_index, matrix)
 		skeleton:set_matrix(disk_2_bone_index, matrix)
