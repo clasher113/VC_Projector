@@ -3,8 +3,9 @@ project(ProjectorServer)
 
 set(CMAKE_CXX_STANDARD 17)
 
-file(GLOB SRC "src/*.cpp")
+file(GLOB_RECURSE SRC "src/*.cpp")
 add_executable(${PROJECT_NAME} ${SRC})
+include_directories("libs/")
 
 include(FetchContent)
 FetchContent_Declare(SFML

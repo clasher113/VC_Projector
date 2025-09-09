@@ -1,8 +1,9 @@
 #include "Window.hpp"
 
 #include "font_binary.hpp"
+#include "gui/Menu.hpp"
 
-#include <memory.h>
+#include <cstring>
 #ifdef _WIN32
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Dwmapi.lib")
@@ -14,9 +15,9 @@
 #endif // _WIN32
 
 const float BORDER_THICKNESS = 3.f;
-const sf::Vector2u statusContainerSize(200, 30);
+const sf::Vector2u statusContainerSize(230, 30);
 
-vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
+vcp::Window::Window(const sf::Vector2u& captureSize) :
 	m_captureSize(0, 0)
 {
 #ifdef _WIN32
@@ -84,7 +85,6 @@ vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
 #endif // _WIN32
 	
 	setTitle("Projector server");
-	setSize(captureSize);
 
 	m_statusContainer.create(statusContainerSize.x, statusContainerSize.y);
 
@@ -100,9 +100,17 @@ vcp::Window::Window(const sf::Vector2u& captureSize) : sf::RenderWindow(),
 	m_statusText.setCharacterSize(20U);
 
 	m_statusContainerSprite.setTexture(m_statusContainer.getTexture());
+
+	m_p_menu = new gui::Menu(m_font, captureSize, statusContainerSize.x - 10.f);
+	m_p_menu->setOnModeChangeCallback([this]() {
+		updateWindowSize();
+	});
+
+	setSize(captureSize);
 }
 
 vcp::Window::~Window() {
+	delete m_p_menu;
 #ifdef _WIN32
 	SelectObject(m_hCaptureDC, m_hOldBitmap);
 	DeleteObject(m_hCaptureBitmap);
@@ -124,12 +132,11 @@ vcp::Window::~Window() {
 void vcp::Window::setSize(const sf::Vector2u& size) {
 	if (size == m_captureSize) return;
 	m_captureSize = size;
-	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), statusContainerSize.x),
-						   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + statusContainerSize.y);
-	sf::WindowBase::setSize(newSize);
-	setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
+	updateWindowSize();
+
 	m_border.setSize(sf::Vector2f(size.x, size.y));
 	m_statusContainerSprite.setPosition(sf::Vector2f(0.f, size.y + BORDER_THICKNESS * 2));
+	m_p_menu->onSizeChange(size);
 
 #ifdef _WIN32
 	m_bmi.bmiHeader.biWidth = size.x;
@@ -175,19 +182,29 @@ void vcp::Window::setStatus(Status status) {
 	m_updateRequire = true;
 }
 
+void vcp::Window::onEvent(const sf::Event& event) {
+	m_p_menu->onEvent(event, m_updateRequire, m_statusContainerSprite.getPosition());
+}
+
 sf::Color* vcp::Window::capture() {
+	if (m_p_menu->getMode() == Mode::SCREEN) {
 #ifdef _WIN32
-	BitBlt(m_hCaptureDC, 0, 0, m_captureSize.x, m_captureSize.y, m_desktopHdc,
-		static_cast<int>(getPosition().x + BORDER_THICKNESS), static_cast<int>(getPosition().y + BORDER_THICKNESS), SRCCOPY);
-	GetDIBits(m_hCaptureDC, m_hCaptureBitmap, 0, m_captureSize.y, &m_p_pixels[0], &m_bmi, DIB_RGB_COLORS);
+		BitBlt(m_hCaptureDC, 0, 0, m_captureSize.x, m_captureSize.y, m_desktopHdc,
+			static_cast<int>(getPosition().x + BORDER_THICKNESS), static_cast<int>(getPosition().y + BORDER_THICKNESS), SRCCOPY);
+		GetDIBits(m_hCaptureDC, m_hCaptureBitmap, 0, m_captureSize.y, &m_p_pixels[0], &m_bmi, DIB_RGB_COLORS);
 #elif __linux__
-	XShmGetImage(m_p_display, m_rootWindow, m_p_xImage, getPosition().x + BORDER_THICKNESS, getPosition().y + BORDER_THICKNESS, AllPlanes);
-	unsigned int location = (m_captureSize.y - 1) * (m_captureSize.x * 4);
-	for (int i = 0; i < m_captureSize.y; ++i) {
-		memcpy(&m_p_pixels[i * (m_captureSize.x)], &m_p_xImage->data[location], m_captureSize.x * 4);
-		location -= m_captureSize.x * 4;
-	}
+		// todo fix on wayland 
+		// https://github.com/KDE/xwaylandvideobridge
+		XShmGetImage(m_p_display, m_rootWindow, m_p_xImage, getPosition().x + BORDER_THICKNESS, getPosition().y + BORDER_THICKNESS, AllPlanes);
+		unsigned int location = (m_captureSize.y - 1) * (m_captureSize.x * 4);
+		for (int i = 0; i < m_captureSize.y; ++i) {
+			memcpy(&m_p_pixels[i * (m_captureSize.x)], &m_p_xImage->data[location], m_captureSize.x * 4);
+			location -= m_captureSize.x * 4;
+		}
 #endif // _WIN32
+	} else if (m_p_menu->getMode() == Mode::IMAGE) {
+		memcpy(m_p_pixels, m_p_menu->getContentPixels(), m_captureSize.x * m_captureSize.y * 4);
+	}
 	return m_p_pixels;
 }
 
@@ -195,11 +212,30 @@ void vcp::Window::draw() {
 	if (!m_updateRequire) return;
 	m_statusContainer.clear(sf::Color::Black);
 	m_statusContainer.draw(m_statusText);
+	m_statusContainer.draw(*m_p_menu);
 	m_statusContainer.display();
 
 	clear(sf::Color::Transparent);
 	sf::RenderWindow::draw(m_border);
+	if (m_p_menu->getMode() != Mode::SCREEN) {
+		sf::RenderWindow::draw(m_p_menu->getContent(), sf::RenderStates().transform.translate(sf::Vector2f(BORDER_THICKNESS, BORDER_THICKNESS)));
+	}
 	sf::RenderWindow::draw(m_statusContainerSprite);
 	display();
 	m_updateRequire = false;
+}
+
+void vcp::Window::updateWindowSize() {
+	const sf::Vector2u menuSize(m_p_menu->getSize() + sf::Vector2f(5.f, 5.f));
+	const sf::Vector2u newSize(std::max(m_captureSize.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), menuSize.x),
+						   m_captureSize.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + menuSize.y);
+
+	if (sf::WindowBase::getSize() != newSize) {
+		sf::WindowBase::setSize(newSize);
+		setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
+	}
+	if (m_statusContainer.getSize() != menuSize) {
+		m_statusContainer.create(menuSize.x, menuSize.y);
+		m_statusContainerSprite.setTexture(m_statusContainer.getTexture(), true);
+	}
 }

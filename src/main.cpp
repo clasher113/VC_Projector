@@ -49,8 +49,9 @@ int main() {
 
 	while (window.isOpen()) {
 		const float delta = clock.restart().asSeconds();
-		float sleepDuration = (1.f / framerate) - delta;
-		if (sleepDuration > 0) sf::sleep(sf::seconds(sleepDuration));
+		const float sleepDuration = (1.f / framerate) - delta;
+		if (sleepDuration > 0) sf::sleep(sf::seconds(sleepDuration / 2.f));
+		clock.restart();
 
 		outPackets.clear();
 		if (currentStatus != Status::WAITING) {
@@ -177,7 +178,7 @@ int main() {
 						}
 					}
 					for (size_t i = 0; i < 4; i++) {
-						colors.emplace_back(color[i] / (image.getSize().x * image.getSize().y));
+						colors.emplace_back(static_cast<uint8_t>(color[i] / (image.getSize().x * image.getSize().y)));
 					}
 				}
 
@@ -206,7 +207,7 @@ int main() {
 
 		if (currentStatus == Status::WAITING) {
 			static float connectTimer = 0.f;
-			connectTimer += delta;
+			connectTimer += delta + sleepDuration;
 			if (connectTimer > 1) {
 				connectTimer = 0;
 				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01f)) == sf::Socket::Status::Done) {
@@ -221,6 +222,7 @@ int main() {
 		if (grabbedWindow) grabbedWindow = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 		sf::Event e;
 		while (window.pollEvent(e)) {
+			window.onEvent(e);
 			if (e.type == sf::Event::MouseButtonPressed) {
 				if (e.mouseButton.button == sf::Mouse::Left) {
 					grabbedOffset = window.getPosition() - sf::Mouse::getPosition();

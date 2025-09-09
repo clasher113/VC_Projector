@@ -23,6 +23,9 @@
 namespace vcp {
     class Window;
 }
+namespace gui {
+    class Menu;
+}
 
 class vcp::Window : public sf::RenderWindow {
 public:
@@ -32,6 +35,8 @@ public:
     void setSize(const sf::Vector2u& size);
     void setPosition(const sf::Vector2i& position);
     void setStatus(Status status);
+
+    void onEvent(const sf::Event& event);
 
     sf::Color* capture();
 
@@ -49,6 +54,10 @@ private:
     sf::Sprite m_statusContainerSprite;
 
     sf::Color* m_p_pixels = nullptr;
+
+    gui::Menu* m_p_menu = nullptr;
+
+    void updateWindowSize();
 
 #ifdef _WIN32
     BITMAPINFO m_bmi{};
