@@ -1,0 +1,96 @@
+#include "GifPlayer.hpp"
+
+#include <SFML/Graphics/Image.hpp>
+
+#include <iostream>
+
+GifPlayer::GifPlayer() :
+m_p_pixels(new sf::Image())
+{
+}
+
+GifPlayer::~GifPlayer() {
+    close();
+	delete m_p_pixels;
+}
+
+bool GifPlayer::openFile(const std::filesystem::path& filePath) {
+    if (m_p_gifFile) close();
+    int error = D_GIF_SUCCEEDED;
+	m_p_gifFile = DGifOpenFileName(filePath.string().c_str(), &error);
+    if (!m_p_gifFile) {
+        std::cout << "DGifOpenFileName() failed - " << error << std::endl;
+        return false;
+    }
+    if (DGifSlurp(m_p_gifFile) == GIF_ERROR) {
+        std::cout << "DGifSlurp() failed - " << m_p_gifFile->Error << std::endl;
+		close();
+        return false;
+    }
+	m_p_pixels->create(m_p_gifFile->SWidth, m_p_gifFile->SHeight, sf::Color::Transparent);
+
+	m_framesData.resize(m_p_gifFile->ImageCount);
+	for (int i = 0; i < m_p_gifFile->ImageCount; i++) {
+		const SavedImage& saved = m_p_gifFile->SavedImages[i];
+		FrameData& data = m_framesData[i];
+
+		data.m_gcb.TransparentColor = NO_TRANSPARENT_COLOR;
+
+		for (const ExtensionBlock* extensionBlock = saved.ExtensionBlocks + saved.ExtensionBlockCount; extensionBlock-- != saved.ExtensionBlocks;) {
+			if (extensionBlock->Function == GRAPHICS_EXT_FUNC_CODE && DGifExtensionToGCB(extensionBlock->ByteCount, extensionBlock->Bytes, &data.m_gcb) == GIF_OK) {
+				data.m_duration = static_cast<float>(data.m_gcb.DelayTime) / 100.f;
+				break;
+			}
+		}
+	}
+
+    return true;
+}
+
+const sf::Image* const GifPlayer::nextFrame() {
+    if (m_p_gifFile->ImageCount < 2) return m_p_pixels;
+	const SavedImage& saved = m_p_gifFile->SavedImages[m_currentFrame];
+	const GifImageDesc& desc = saved.ImageDesc;
+	const ColorMapObject* colorMap = desc.ColorMap ? desc.ColorMap : m_p_gifFile->SColorMap;
+
+	sf::IntRect rect(
+		std::max(desc.Left, 0),
+		std::max(desc.Top, 0),
+		std::min(desc.Left + desc.Width, m_p_gifFile->SWidth),
+		std::min(desc.Top + desc.Height, m_p_gifFile->SHeight)
+	);
+
+	for (int y = rect.top; y < rect.height; ++y) {
+		const GifByteType* src = saved.RasterBits + (desc.Width * (y - desc.Top) + (rect.left - desc.Left));
+		for (int x = rect.left; x < rect.width; ++x) {
+			int i = int(*src++);
+			i *= (unsigned)i < (unsigned)colorMap->ColorCount;
+			GifColorType color = colorMap->Colors[i];
+			if (colorMap && i != m_framesData[m_currentFrame].m_gcb.TransparentColor) {
+				m_p_pixels->setPixel(x, y, sf::Color(color.Red, color.Green, color.Blue));
+			}
+		}
+	}
+	m_currentFrame++;
+	if (m_currentFrame >= m_p_gifFile->ImageCount) m_currentFrame = 0;
+
+    return m_p_pixels;
+}
+
+int GifPlayer::getFramesCount() const {
+	return m_p_gifFile ? m_p_gifFile->ImageCount : 0;
+}
+
+float GifPlayer::getCurrentFrameDuration() const {
+	return m_framesData.empty() ? -1 : m_framesData[m_currentFrame].m_duration;
+}
+
+void GifPlayer::close() {
+    if (m_p_gifFile) {
+        int error = D_GIF_SUCCEEDED;
+        DGifCloseFile(m_p_gifFile, &error);
+		m_p_gifFile = nullptr;
+    }
+    m_currentFrame = 0;
+	m_framesData.clear();
+}
