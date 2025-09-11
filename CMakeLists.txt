@@ -17,7 +17,7 @@ FetchContent_Declare(SFML
 FetchContent_MakeAvailable(SFML)
 
 #target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
-target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-system sfml-window sfml-network)
+target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-system sfml-window sfml-network gif)
 if (UNIX)
 target_link_libraries(${PROJECT_NAME} PRIVATE Xext X11)
 endif (UNIX)

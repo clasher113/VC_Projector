@@ -48,10 +48,11 @@ int main() {
 	std::vector<std::vector<uint8_t>> outPackets;
 
 	while (window.isOpen()) {
+		const float sleepDuration = ((1.f / framerate) - clock.getElapsedTime().asSeconds()) / 2.f;
+		if (sleepDuration > 0) sf::sleep(sf::seconds(sleepDuration));
 		const float delta = clock.restart().asSeconds();
-		const float sleepDuration = (1.f / framerate) - delta;
-		if (sleepDuration > 0) sf::sleep(sf::seconds(sleepDuration / 2.f));
-		clock.restart();
+
+		window.onUpdate(delta);
 
 		outPackets.clear();
 		if (currentStatus != Status::WAITING) {
@@ -207,7 +208,7 @@ int main() {
 
 		if (currentStatus == Status::WAITING) {
 			static float connectTimer = 0.f;
-			connectTimer += delta + sleepDuration;
+			connectTimer += delta;
 			if (connectTimer > 1) {
 				connectTimer = 0;
 				if (socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01f)) == sf::Socket::Status::Done) {

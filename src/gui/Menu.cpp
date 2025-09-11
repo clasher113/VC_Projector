@@ -9,10 +9,21 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
+#include <gif_lib.h>
+
+#include <filesystem>
 #include <cstring>
 
+namespace fs = std::filesystem;
+
+std::vector<Image*> loadGif(const fs::path& path);
+
+struct Image {
+	float m_frameDuration;
+	sf::Texture* m_p_texture;
+};
+
 gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float width) :
-	m_p_texture(new sf::Texture),
 	m_p_sprite(new sf::Sprite),
 	m_p_canvas(new sf::RenderTexture()),
 	m_p_canvasSprite(new sf::Sprite)
@@ -26,12 +37,23 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 	button->setSize(sf::Vector2f(width, 30.f));
 	button->setText("Choose Image");
 	button->setCallback([this]() {
-		pfd::open_file path("Fuck", "", { "Images", "*.png *.jpg *.bmp *.tga *.gif" });
+		pfd::open_file path("Choose Image", "", { "Images", "*.png *.jpg *.bmp *.tga *.gif" });
 		if (path.result().empty()) return;
-		if (!m_p_texture->loadFromFile(path.result().back())) {
-			std::cout << "Loading error" << std::endl;
+		clearImages();
+		fs::path filePath(path.result().back());
+		if (filePath.extension() == ".gif") {
+			m_images = loadGif(filePath);
+		} else {
+			sf::Texture* texture = new sf::Texture;
+			if (!texture->loadFromFile(filePath.string())) {
+				std::cout << "Loading error" << std::endl;
+				delete texture;
+			}
+			else m_images.emplace_back(new Image{ -1, texture });
 		}
-		m_p_sprite->setTexture(*m_p_texture, true);
+		if (!m_images.empty()){
+			m_p_sprite->setTexture(*m_images.front()->m_p_texture, true);
+		}
 		updateContent();
 	});
 	m_p_imageContainer->addElement(button);
@@ -99,13 +121,33 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 
 gui::Menu::~Menu() {
 	if (m_p_contentPixels) delete[] m_p_contentPixels;
-	delete m_p_texture;
+	clearImages();
 	delete m_p_sprite;
 	delete m_p_canvas;
 	delete m_p_canvasSprite;
 	clearMainContainer();
 	delete m_p_mainContainer;
 	delete m_p_imageContainer;
+}
+
+void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
+	if (m_mode == Mode::SCREEN) return;
+	if (m_images.size() > 1) {
+		m_animationTimer += deltaTime;
+		Image* image = m_images[m_currentFrame];
+		const size_t lastFrame = m_currentFrame;
+		while (m_animationTimer > image->m_frameDuration){
+			m_animationTimer -= image->m_frameDuration;
+			m_currentFrame += 1;
+			if (m_currentFrame >= m_images.size()) m_currentFrame = 0;
+			image = m_images[m_currentFrame];
+		}
+		if (lastFrame != m_currentFrame) {
+			m_p_sprite->setTexture(*image->m_p_texture, true);
+			updateContent();
+			refreshFlag = true;
+		}
+	}
 }
 
 void gui::Menu::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector2f& offset) {
@@ -148,11 +190,24 @@ void gui::Menu::clearMainContainer() {
 	m_p_mainContainer->removeElement(m_p_imageContainer);
 }
 
+void gui::Menu::clearImages() {
+	m_currentFrame = 0;
+	m_animationTimer = 0.f;
+	for (Image* image : m_images) {
+		delete image->m_p_texture;
+		delete image;
+	}
+	m_images.clear();
+}
+
 void gui::Menu::updateContent() {
 	const sf::FloatRect bounds = m_p_sprite->getLocalBounds();
 	const sf::Vector2u size = m_p_canvas->getSize();
-	m_p_sprite->setScale((m_keepAspectratio ? std::min(size.x, size.y) : size.x) / bounds.width,
-		(m_keepAspectratio ? std::min(size.x, size.y) : size.y) / bounds.height);
+
+	sf::Vector2f scale(size.x / bounds.width, size.y / bounds.height);
+	if (m_keepAspectratio) scale = sf::Vector2f(std::min(scale.x, scale.y), std::min(scale.x, scale.y));
+	m_p_sprite->setScale(scale);
+	m_p_sprite->setPosition((size.x - bounds.width * scale.x) / 2.f, (size.y - bounds.height * scale.y) / 2.f);
 
 	m_p_canvas->clear(m_allowAlpha ? sf::Color::Transparent : sf::Color::Black);
 	m_p_canvas->draw(*m_p_sprite);
@@ -165,4 +220,65 @@ void gui::Menu::updateContent() {
 	for (size_t i = 0; i < image.getSize().x * image.getSize().y; i++) {
 		std::swap(m_p_contentPixels[i].r, m_p_contentPixels[i].b);
 	}
+}
+
+std::vector<Image*> loadGif(const fs::path& path) {
+	std::vector<Image*> result;
+	int error = D_GIF_SUCCEEDED;
+	GifFileType* gifFile = DGifOpenFileName(path.string().c_str(), &error);
+	if (!gifFile) {
+		std::cout << "DGifOpenFileName() failed - " << error << std::endl;
+		return result;
+	}
+	if (DGifSlurp(gifFile) == GIF_ERROR) {
+		std::cout << "DGifSlurp() failed - " << gifFile->Error << std::endl;
+		DGifCloseFile(gifFile, &error);
+		return result;
+	}
+
+	ColorMapObject* commonMap = gifFile->SColorMap;
+
+	sf::Image sfImage;
+	sfImage.create(gifFile->SWidth, gifFile->SHeight);
+
+	for (int i = 0; i < gifFile->ImageCount; ++i) {
+		Image* image = new Image;
+		image->m_p_texture = new sf::Texture;
+		result.emplace_back(image);
+
+		const SavedImage& saved = gifFile->SavedImages[i];
+		const GifImageDesc& desc = saved.ImageDesc;
+		const ColorMapObject* colorMap = desc.ColorMap ? desc.ColorMap : commonMap;
+		GraphicsControlBlock gcb{};
+		gcb.TransparentColor = NO_TRANSPARENT_COLOR;
+
+		for (const ExtensionBlock* extensionBlock = gifFile->SavedImages[i].ExtensionBlocks + gifFile->SavedImages[i].ExtensionBlockCount; extensionBlock-- != gifFile->SavedImages[i].ExtensionBlocks;) {
+			if (extensionBlock->Function == GRAPHICS_EXT_FUNC_CODE && DGifExtensionToGCB(extensionBlock->ByteCount, extensionBlock->Bytes, &gcb) == GIF_OK) {
+				image->m_frameDuration = (gifFile->ImageCount > 1 ? static_cast<float>(gcb.DelayTime) / 100.f : -1);
+				break;
+			}
+		}
+
+		sf::IntRect rect(
+			std::max(desc.Left, 0),
+			std::max(desc.Top, 0),
+			std::min(desc.Left + desc.Width, gifFile->SWidth),
+			std::min(desc.Top + desc.Height, gifFile->SHeight)
+		);
+
+		for (int y = rect.top; y < rect.height; ++y) {
+			const GifByteType* src = saved.RasterBits + (desc.Width * (y - desc.Top) + (rect.left - desc.Left));
+			for (int x = rect.left; x < rect.width; ++x) {
+				int i = int(*src++);
+				i *= (unsigned)i < (unsigned)colorMap->ColorCount;
+				GifColorType color = colorMap->Colors[i];
+				if (colorMap && i != gcb.TransparentColor) {
+					sfImage.setPixel(x, y, sf::Color(color.Red, color.Green, color.Blue));
+				}
+			}
+		}
+		image->m_p_texture->loadFromImage(sfImage);
+	}
+	DGifCloseFile(gifFile, &error);
+	return result;
 }

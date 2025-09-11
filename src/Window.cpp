@@ -182,6 +182,10 @@ void vcp::Window::setStatus(Status status) {
 	m_updateRequire = true;
 }
 
+void vcp::Window::onUpdate(const float deltaTime) {
+	m_p_menu->onUpdate(deltaTime, m_updateRequire);
+}
+
 void vcp::Window::onEvent(const sf::Event& event) {
 	m_p_menu->onEvent(event, m_updateRequire, m_statusContainerSprite.getPosition());
 }

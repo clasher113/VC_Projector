@@ -36,6 +36,7 @@ public:
     void setPosition(const sf::Vector2i& position);
     void setStatus(Status status);
 
+    void onUpdate(const float deltaTime);
     void onEvent(const sf::Event& event);
 
     sf::Color* capture();
