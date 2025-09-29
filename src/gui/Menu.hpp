@@ -12,6 +12,7 @@ namespace gui {
     class Menu;
     class Button;
     class Container;
+    class PlayerController;
 }
 
 namespace sf {
@@ -39,14 +40,17 @@ public:
     Mode getMode() const;
     sf::Vector2f getSize() const override;
 
+    bool isCursorOverElement(const sf::Vector2f& cursorPos);
+
     sf::Image* m_p_currentImage = nullptr;
 
 private:
-    bool m_keepAspectratio = false, m_allowAlpha = false;
+    bool m_keepAspectratio = false, m_allowAlpha = false, m_justOpened = false;
     Mode m_mode = Mode::SCREEN;
     float m_animationTimer = 0.f;
 
     GifPlayer* m_p_gifPlayer;
+    PlayerController* m_p_playerController;
 
     gui::Container* m_p_mainContainer = nullptr;
     gui::Container* m_p_imageContainer = nullptr;

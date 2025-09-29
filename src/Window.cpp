@@ -4,6 +4,7 @@
 #include "gui/Menu.hpp"
 
 #include <cstring>
+#include <SFML/Window/Event.hpp>
 #ifdef _WIN32
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Dwmapi.lib")
@@ -186,8 +187,33 @@ void vcp::Window::onUpdate(const float deltaTime) {
 	m_p_menu->onUpdate(deltaTime, m_updateRequire);
 }
 
-void vcp::Window::onEvent(const sf::Event& event) {
-	m_p_menu->onEvent(event, m_updateRequire, m_statusContainerSprite.getPosition());
+void vcp::Window::pollEvents() {
+	if (m_grabbed) m_grabbed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
+
+	sf::Event e;
+	while (sf::WindowBase::pollEvent(e)) {
+		m_p_menu->onEvent(e, m_updateRequire, m_statusContainerSprite.getPosition());
+		sf::Vector2f cursorPos(sf::Mouse::getPosition(*this));
+		if (m_p_menu->isCursorOverElement(cursorPos - m_statusContainerSprite.getPosition())) continue;
+
+		if (e.type == sf::Event::MouseButtonPressed) {
+			if (e.mouseButton.button == sf::Mouse::Left) {
+				m_grabbedOffset = sf::WindowBase::getPosition() - sf::Mouse::getPosition();
+				m_grabbed = true;
+			}
+		}
+		else if (e.type == sf::Event::MouseButtonReleased) {
+			if (e.mouseButton.button == sf::Mouse::Left)
+				m_grabbed = false;
+			else if (e.mouseButton.button == sf::Mouse::Right)
+				sf::WindowBase::close();
+		}
+		else if (e.type == sf::Event::MouseMoved) {
+			if (m_grabbed)
+				sf::WindowBase::setPosition(sf::Mouse::getPosition() + m_grabbedOffset);
+		}
+	}
+
 }
 
 sf::Color* vcp::Window::capture() {

@@ -21,8 +21,9 @@ public:
 
     sf::Vector2f getSize() const override;
 
+protected:
+    void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+
 private:
     std::vector<Widget*> m_widgets;
-
-    void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
 };

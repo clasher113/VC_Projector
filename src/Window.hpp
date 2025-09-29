@@ -37,16 +37,17 @@ public:
     void setStatus(Status status);
 
     void onUpdate(const float deltaTime);
-    void onEvent(const sf::Event& event);
+    void pollEvents();
 
     sf::Color* capture();
 
     void draw();
 
 private:
-    bool m_updateRequire = true;
+    bool m_updateRequire = true, m_grabbed = false;
 
     sf::Vector2u m_captureSize;
+    sf::Vector2i m_grabbedOffset;
 
     sf::RenderTexture m_statusContainer;
     sf::RectangleShape m_border;

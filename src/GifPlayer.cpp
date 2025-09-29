@@ -1,7 +1,8 @@
 #include "GifPlayer.hpp"
 
-#include <SFML/Graphics/Image.hpp>
+#include "gui/PlayerController.hpp"
 
+#include <SFML/Graphics/Image.hpp>
 #include <iostream>
 
 GifPlayer::GifPlayer() :
@@ -15,6 +16,7 @@ GifPlayer::~GifPlayer() {
 }
 
 bool GifPlayer::openFile(const std::filesystem::path& filePath) {
+	m_currentFrame = 0;
     if (m_p_gifFile) close();
     int error = D_GIF_SUCCEEDED;
 	m_p_gifFile = DGifOpenFileName(filePath.string().c_str(), &error);
@@ -42,6 +44,10 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 				break;
 			}
 		}
+	}
+	if (m_p_controller) {
+		m_p_controller->onFileOpen(m_p_gifFile->ImageCount);
+		m_p_controller->onNewFrame(m_currentFrame);
 	}
 
     return true;
@@ -73,12 +79,26 @@ const sf::Image* const GifPlayer::nextFrame() {
 	}
 	m_currentFrame++;
 	if (m_currentFrame >= m_p_gifFile->ImageCount) m_currentFrame = 0;
+	if (m_p_controller) m_p_controller->onNewFrame(m_currentFrame);
 
     return m_p_pixels;
 }
 
-int GifPlayer::getFramesCount() const {
-	return m_p_gifFile ? m_p_gifFile->ImageCount : 0;
+void GifPlayer::setFrameNum(size_t frame) {
+	if (!m_p_gifFile) return;
+	if (frame >= m_p_gifFile->ImageCount) frame = 0;
+	if (frame < m_currentFrame) m_currentFrame = 0;
+	while (m_currentFrame < frame) {
+		nextFrame();
+	}
+}
+
+void GifPlayer::setController(gui::PlayerController* controller) {
+	m_p_controller = controller;
+}
+
+size_t GifPlayer::getFramesCount() const {
+	return m_p_gifFile ? m_p_gifFile->ImageCount - 1 : 0;
 }
 
 float GifPlayer::getCurrentFrameDuration() const {

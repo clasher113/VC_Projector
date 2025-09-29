@@ -3,6 +3,7 @@
 #include "Button.hpp"
 #include "Container.hpp"
 #include "../GifPlayer.hpp"
+#include "PlayerController.hpp"
 #include "portable-file-dialogs.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -25,15 +26,19 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 	m_p_sprite(new sf::Sprite),
 	m_p_canvas(new sf::RenderTexture()),
 	m_p_canvasSprite(new sf::Sprite),
-	m_p_gifPlayer(new GifPlayer)
+	m_p_gifPlayer(new GifPlayer),
+	m_p_playerController(new PlayerController(font, m_p_gifPlayer, width))
 {
 	onSizeChange(canvasSize);
 
 	m_p_imageContainer = new gui::Container;
 	m_p_imageContainer->setPosition(sf::Vector2f(5.f, 65.f));
 
+	m_p_imageContainer->addElement(m_p_playerController);
+
 	gui::Button* button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
+	button->setPosition(sf::Vector2f(0.f, 60.f));
 	button->setText("Choose Image");
 	button->setCallback([this]() {
 		pfd::open_file path("Choose Image", "", { "Images", "*.png *.jpg *.bmp *.tga *.gif" });
@@ -42,11 +47,12 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 		fs::path filePath(path.result().back());
 		if (filePath.extension() == ".gif") {
 			m_p_gifPlayer->openFile(filePath);
-			if (m_p_gifPlayer->getFramesCount() < 2){
+			if (m_p_gifPlayer->getFramesCount() < 2 || m_p_playerController->isPaused()){
 				m_p_texture->loadFromImage(*m_p_gifPlayer->nextFrame());
 				m_p_sprite->setTexture(*m_p_texture, true);
 				updateContent();
 			}
+			m_justOpened = true;
 		} else {
 			if (!m_p_texture->loadFromFile(filePath.string())) {
 				std::cout << "Loading error" << std::endl;
@@ -60,7 +66,7 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 
 	button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
-	button->setPosition(sf::Vector2f(0.f, 35.f));
+	button->setPosition(sf::Vector2f(0.f, 95.f));
 	auto alphaButtonText = [this]() {
 		return std::string("Allow alpha: ") + (m_allowAlpha ? "True" : "False");
 	};
@@ -76,7 +82,7 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 
 	button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
-	button->setPosition(sf::Vector2f(0.f, 70.f));
+	button->setPosition(sf::Vector2f(0.f, 130.f));
 	auto aspectRatioText = [this]() {
 		return std::string("Keep aspect ratio: ") + (m_keepAspectratio ? "True" : "False");
 	};
@@ -116,7 +122,6 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 	button->setPosition(sf::Vector2f(5.f, 30.f));
 	button->setSize(sf::Vector2f(width, 30.f));
 	m_p_mainContainer->addElement(button);
-
 }
 
 gui::Menu::~Menu() {
@@ -132,6 +137,11 @@ gui::Menu::~Menu() {
 
 void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
 	if (m_mode == Mode::SCREEN) return;
+	if (m_justOpened) {
+		m_justOpened = false;
+		return;
+	}
+	if (m_p_playerController->isPaused()) return;
 	if (m_p_gifPlayer->getFramesCount() < 2) return;
 	const sf::Image* newFrame = nullptr;
 	m_animationTimer += deltaTime;
@@ -177,6 +187,10 @@ Mode gui::Menu::getMode() const {
 
 sf::Vector2f gui::Menu::getSize() const {
 	return m_p_mainContainer->getSize();
+}
+
+bool gui::Menu::isCursorOverElement(const sf::Vector2f& cursorPos) {
+	return sf::FloatRect(m_p_mainContainer->getPosition(), m_p_mainContainer->getSize()).contains(cursorPos);
 }
 
 void gui::Menu::draw(sf::RenderTarget& target, sf::RenderStates states) const {

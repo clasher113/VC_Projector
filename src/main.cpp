@@ -4,7 +4,6 @@
 
 #include <SFML/Network.hpp>
 #include <SFML/System/Sleep.hpp>
-#include <SFML/Window/Event.hpp>
 
 #include "Window.hpp"
 #include "Enum.hpp"
@@ -37,9 +36,6 @@ int main() {
 	window.setStatus(currentStatus);
 
 	sf::TcpSocket socket;
-
-	sf::Vector2i grabbedOffset;
-	bool grabbedWindow = false;
 
 	float syncTimer = 0.f;
 	sf::Clock clock;
@@ -219,28 +215,8 @@ int main() {
 				}
 			}
 		}
-
-		if (grabbedWindow) grabbedWindow = sf::Mouse::isButtonPressed(sf::Mouse::Left);
-		sf::Event e;
-		while (window.pollEvent(e)) {
-			window.onEvent(e);
-			if (e.type == sf::Event::MouseButtonPressed) {
-				if (e.mouseButton.button == sf::Mouse::Left) {
-					grabbedOffset = window.getPosition() - sf::Mouse::getPosition();
-					grabbedWindow = true;
-				}
-			}
-			else if (e.type == sf::Event::MouseButtonReleased) {
-				if (e.mouseButton.button == sf::Mouse::Left)
-					grabbedWindow = false;
-				else if (e.mouseButton.button == sf::Mouse::Right)
-					window.close();
-			}
-			else if (e.type == sf::Event::MouseMoved) {
-				if (grabbedWindow)
-					window.setPosition(sf::Mouse::getPosition() + grabbedOffset);
-			}
-		}
+		
+		window.pollEvents();
 		window.draw();
 	}
 	if (currentStatus != Status::WAITING) {
