@@ -7,6 +7,7 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <SFML/Graphics/Image.hpp>
 
 gui::PlayerController::PlayerController(const sf::Font& font, GifPlayer* player, float width) :
 m_p_player(player),
@@ -14,14 +15,12 @@ m_p_pauseTexture(new sf::Texture),
 m_p_playTexture(new sf::Texture),
 m_p_stopTexture(new sf::Texture),
 m_p_slider(new gui::Slider()),
-m_p_text(new sf::Text)
+m_p_text(new sf::Text(font, "", 20U))
 {
 	player->setController(this);
 	generateTextures();
 	
-	m_p_text->setFont(font);
-	m_p_text->setCharacterSize(20U);
-	m_p_text->setPosition(width, 20.f);
+	m_p_text->setPosition(sf::Vector2f(width, 20.f));
 	updateText(0);
 
 	m_p_slider->setSize(sf::Vector2f(width, 20.f));
@@ -33,7 +32,7 @@ m_p_text(new sf::Text)
 	gui::Button* playPauseButton = new gui::Button(font);
 	playPauseButton->setIcon(*m_p_pauseTexture);
 	playPauseButton->setSize(sf::Vector2f(30.f, 30.f));
-	playPauseButton->setPosition(35.f, 25.f);
+	playPauseButton->setPosition(sf::Vector2f(35.f, 25.f));
 	playPauseButton->setCallback([this, playPauseButton]() {
 		m_isPaused = !m_isPaused;
 		playPauseButton->setIcon(*(m_isPaused ? m_p_playTexture : m_p_pauseTexture));
@@ -43,7 +42,7 @@ m_p_text(new sf::Text)
 	gui::Button* stopButton = new gui::Button(font);
 	stopButton->setIcon(*m_p_stopTexture);
 	stopButton->setSize(sf::Vector2f(30.f, 30.f));
-	stopButton->setPosition(0.f, 25.f);
+	stopButton->setPosition(sf::Vector2f(0.f, 25.f));
 	stopButton->setCallback([this, playPauseButton]() {
 		m_isPaused = true;
 		m_p_player->setFrameNum(0);
@@ -84,7 +83,7 @@ void gui::PlayerController::draw(sf::RenderTarget& target, sf::RenderStates stat
 
 void gui::PlayerController::generateTextures() {
 	sf::RenderTexture renderTarget;
-	renderTarget.create(30, 30);
+	renderTarget.resize(sf::Vector2u(30, 30));
 
 	auto drawTo = [&renderTarget](sf::Shape& shape, sf::Texture* dstTexture) {
 		renderTarget.clear(sf::Color::Transparent);
@@ -121,5 +120,5 @@ void gui::PlayerController::generateTextures() {
 
 void gui::PlayerController::updateText(size_t currentFrame) {
 	m_p_text->setString("Frame: " + std::to_string(currentFrame) + '/' + std::to_string(m_p_player->getFramesCount()));
-	m_p_text->setOrigin(m_p_text->getGlobalBounds().width, 0.f);
+	m_p_text->setOrigin(sf::Vector2f(m_p_text->getGlobalBounds().size.x, 0.f));
 }

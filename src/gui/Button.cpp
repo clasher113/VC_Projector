@@ -1,6 +1,7 @@
 #include "Button.hpp"
 
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -13,12 +14,14 @@ const sf::Color IDLE_COLOR(100, 100, 100);
 const sf::Color HOVER_COLOR(147, 147, 147);
 const sf::Color CLICKED_COLOR(60, 140, 200);
 
+static sf::Texture temp;
+
 Button::Button(const sf::Font& font) :
     m_lastState(State::IDLE),
     m_currentState(State::IDLE),
 	m_p_shape(new sf::RectangleShape(sf::Vector2f(100.f, 30.f))),
-	m_p_text(new sf::Text("The Button", font, 20U)),
-	m_p_iconSprite(new sf::Sprite)
+	m_p_text(new sf::Text(font, "The Button", 20U)),
+	m_p_iconSprite(new sf::Sprite(temp))
 {
 	m_p_shape->setFillColor(IDLE_COLOR);
 	m_p_shape->setOutlineColor(sf::Color(35, 35, 35));
@@ -34,27 +37,26 @@ Button::~Button() {
 }
 
 void Button::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector2f& offset) {
-	switch (event.type) {
-		case sf::Event::MouseMoved :
-			if (getTransform().transformRect(m_p_shape->getGlobalBounds()).contains(sf::Vector2f(event.mouseMove.x, event.mouseMove.y) - offset)) {
-				m_currentState = State::HOVER;
-			} else {
-				m_currentState = State::IDLE;
-			}
-			break;
-		case sf::Event::MouseButtonPressed :
-			if (event.mouseButton.button == sf::Mouse::Button::Left && m_currentState == State::HOVER) {
-				m_currentState = State::PRESSED;
-			}
-			break;
-		case sf::Event::MouseButtonReleased :
-			if (event.mouseButton.button == sf::Mouse::Button::Left && m_currentState == State::PRESSED) {
-				m_currentState = State::HOVER;
-			}
-			break;
-		case sf::Event::MouseLeft :
+	if (const auto pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
+		if (pressed->button == sf::Mouse::Button::Left && m_currentState == State::HOVER) {
+			m_currentState = State::PRESSED;
+		}
+	}
+	else if (const auto released = event.getIf<sf::Event::MouseButtonReleased>()) {
+		if (released->button == sf::Mouse::Button::Left && m_currentState == State::PRESSED) {
+			m_currentState = State::HOVER;
+		}
+	}
+	else if (const auto moved = event.getIf<sf::Event::MouseMoved>()) {
+		if (getTransform().transformRect(m_p_shape->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset)) {
+			m_currentState = State::HOVER;
+		}
+		else {
 			m_currentState = State::IDLE;
-			break;
+		}
+	}
+	else if (const auto mouseLeft = event.getIf<sf::Event::MouseLeft>()){
+		m_currentState = State::IDLE;
 	}
 	if (m_currentState != m_lastState) {
 		refreshFlag = true;
@@ -82,7 +84,7 @@ void Button::setText(const std::string& string) {
 
 void gui::Button::setIcon(const sf::Texture& texture) {
 	m_style = Style::ICON;
-	m_p_iconSprite->setTexture(texture);
+	m_p_iconSprite->setTexture(texture, true);
 	centerIcon();
 }
 
@@ -121,16 +123,16 @@ void Button::draw(sf::RenderTarget& target, sf::RenderStates states) const {
 
 void Button::centerText() {
 	sf::FloatRect textRect(m_p_text->getLocalBounds());
-	textRect.height = m_p_text->getFont()->getLineSpacing(m_p_text->getCharacterSize());
-	m_p_text->setOrigin(sf::Vector2f(textRect.left + textRect.width / 2.0f, textRect.height / 2.0f) - m_p_shape->getSize() / 2.f);
+	textRect.size.y = m_p_text->getFont().getLineSpacing(m_p_text->getCharacterSize());
+	m_p_text->setOrigin(sf::Vector2f(textRect.position.x + textRect.size.x / 2.0f, textRect.size.y / 2.0f) - m_p_shape->getSize() / 2.f);
 }
 
 void gui::Button::centerIcon() {
 	const sf::FloatRect bounds = m_p_iconSprite->getLocalBounds();
 	const sf::Vector2f size = getSize();
 
-	sf::Vector2f scale(size.x / bounds.width, size.y / bounds.height);
+	sf::Vector2f scale(size.x / bounds.size.x, size.y / bounds.size.y);
 	scale = sf::Vector2f(std::min(scale.x, scale.y), std::min(scale.x, scale.y));
 	m_p_iconSprite->setScale(scale);
-	m_p_iconSprite->setPosition((size.x - bounds.width * scale.x) / 2.f, (size.y - bounds.height * scale.y) / 2.f);
+	m_p_iconSprite->setPosition(sf::Vector2f((size.x - bounds.size.x * scale.x) / 2.f, (size.y - bounds.size.y * scale.y) / 2.f));
 }

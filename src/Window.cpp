@@ -19,19 +19,22 @@ const float BORDER_THICKNESS = 3.f;
 const sf::Vector2u statusContainerSize(230, 30);
 
 vcp::Window::Window(const sf::Vector2u& captureSize) :
-	m_captureSize(0, 0)
+	m_captureSize(0, 0),
+	m_font(font_binary::getData(), font_binary::getSize()),
+	m_statusText(m_font, "", 20U),
+	m_statusContainerSprite(m_statusContainer.getTexture())
 {
 #ifdef _WIN32
-	sf::RenderWindow::create(sf::VideoMode(320, 240), "", sf::Style::None);
+	sf::RenderWindow::create(sf::VideoMode(sf::Vector2u(320, 240)), "", sf::Style::None);
 
 	MARGINS margins{};
 	margins.cxLeftWidth = -1;
 
 	// enable window transparency
-	SetWindowLong(getSystemHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
-	DwmExtendFrameIntoClientArea(getSystemHandle(), &margins);
+	SetWindowLong(getNativeHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
+	DwmExtendFrameIntoClientArea(getNativeHandle(), &margins);
 	// make window always on top
-	SetWindowPos(getSystemHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+	SetWindowPos(getNativeHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	HWND desktop = GetDesktopWindow();
 	m_desktopHdc = GetDC(desktop);
@@ -87,20 +90,13 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 	
 	setTitle("Projector server");
 
-	m_statusContainer.create(statusContainerSize.x, statusContainerSize.y);
+	m_statusContainer.resize(sf::Vector2u(statusContainerSize.x, statusContainerSize.y));
 
 	m_border.setFillColor(sf::Color::Transparent);
 	m_border.setOutlineColor(sf::Color::Yellow);
 	m_border.setOutlineThickness(BORDER_THICKNESS);
 	m_border.setPosition(sf::Vector2f(BORDER_THICKNESS, BORDER_THICKNESS));
 	m_border.setSize(sf::Vector2f(captureSize.x, captureSize.y));
-
-	m_font.loadFromMemory(font_binary::getData(), font_binary::getSize());
-
-	m_statusText.setFont(m_font);
-	m_statusText.setCharacterSize(20U);
-
-	m_statusContainerSprite.setTexture(m_statusContainer.getTexture());
 
 	m_p_menu = new gui::Menu(m_font, captureSize, statusContainerSize.x - 10.f);
 	m_p_menu->setOnModeChangeCallback([this]() {
@@ -188,32 +184,30 @@ void vcp::Window::onUpdate(const float deltaTime) {
 }
 
 void vcp::Window::pollEvents() {
-	if (m_grabbed) m_grabbed = sf::Mouse::isButtonPressed(sf::Mouse::Left);
+	if (m_grabbed) m_grabbed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
 
-	sf::Event e;
-	while (sf::WindowBase::pollEvent(e)) {
-		m_p_menu->onEvent(e, m_updateRequire, m_statusContainerSprite.getPosition());
+	while (const auto e = sf::WindowBase::pollEvent()) {
+		m_p_menu->onEvent(e.value(), m_updateRequire, m_statusContainerSprite.getPosition());
 		sf::Vector2f cursorPos(sf::Mouse::getPosition(*this));
 		if (m_p_menu->isCursorOverElement(cursorPos - m_statusContainerSprite.getPosition())) continue;
 
-		if (e.type == sf::Event::MouseButtonPressed) {
-			if (e.mouseButton.button == sf::Mouse::Left) {
+		if (const auto pressed = e->getIf<sf::Event::MouseButtonPressed>()) {
+			if (pressed->button == sf::Mouse::Button::Left) {
 				m_grabbedOffset = sf::WindowBase::getPosition() - sf::Mouse::getPosition();
 				m_grabbed = true;
 			}
 		}
-		else if (e.type == sf::Event::MouseButtonReleased) {
-			if (e.mouseButton.button == sf::Mouse::Left)
+		else if (const auto released = e->getIf<sf::Event::MouseButtonReleased>()) {
+			if (released->button == sf::Mouse::Button::Left)
 				m_grabbed = false;
-			else if (e.mouseButton.button == sf::Mouse::Right)
+			else if (released->button == sf::Mouse::Button::Right)
 				sf::WindowBase::close();
 		}
-		else if (e.type == sf::Event::MouseMoved) {
+		else if (e->is<sf::Event::MouseMoved>()) {
 			if (m_grabbed)
 				sf::WindowBase::setPosition(sf::Mouse::getPosition() + m_grabbedOffset);
 		}
 	}
-
 }
 
 sf::Color* vcp::Window::capture() {
@@ -265,7 +259,7 @@ void vcp::Window::updateWindowSize() {
 		setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
 	}
 	if (m_statusContainer.getSize() != menuSize) {
-		m_statusContainer.create(menuSize.x, menuSize.y);
+		m_statusContainer.resize(sf::Vector2u(menuSize.x, menuSize.y));
 		m_statusContainerSprite.setTexture(m_statusContainer.getTexture(), true);
 	}
 }

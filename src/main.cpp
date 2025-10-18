@@ -4,6 +4,7 @@
 
 #include <SFML/Network.hpp>
 #include <SFML/System/Sleep.hpp>
+#include <SFML/Graphics/Image.hpp>
 
 #include "Window.hpp"
 #include "Enum.hpp"
@@ -16,7 +17,7 @@ uint16_t displayResolutionY = 120;
 uint16_t displayReadSizeX = displayResolutionX;
 uint16_t displayReadSizeY = displayResolutionY;
 
-const char* REMOTE_ADDRESS = "127.0.0.1";
+const sf::IpAddress REMOTE_ADDRESS(127, 0, 0, 1);
 const unsigned short REMOTE_PORT = 6969;
 constexpr uint32_t RECEIVE_MAX_SIZE = 1024 * 1024;
 const uint32_t PROTOCOL_MAGIC = 0xAAFFFAA;
@@ -301,7 +302,7 @@ void sendMessage(sf::TcpSocket& socket, const void* data, uint32_t size) {
 
 #ifdef _DEBUG
 	std::cout << "sent " << size << " bytes" << std::endl;
-	std::cout << "send status " << status << std::endl;
+	std::cout << "send status " << static_cast<int>(status) << std::endl;
 #endif // _DEBUG
 }
 

@@ -10,6 +10,7 @@
 #include <SFML/Graphics/RenderTexture.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
+#include <SFML/Graphics/Image.hpp>
 
 #include <filesystem>
 #include <cstring>
@@ -23,9 +24,9 @@ struct Image {
 
 gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float width) :
 	m_p_texture(new sf::Texture),
-	m_p_sprite(new sf::Sprite),
+	m_p_sprite(new sf::Sprite(*m_p_texture)),
 	m_p_canvas(new sf::RenderTexture()),
-	m_p_canvasSprite(new sf::Sprite),
+	m_p_canvasSprite(new sf::Sprite(m_p_canvas->getTexture())),
 	m_p_gifPlayer(new GifPlayer),
 	m_p_playerController(new PlayerController(font, m_p_gifPlayer, width))
 {
@@ -48,9 +49,10 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 		if (filePath.extension() == ".gif") {
 			m_p_gifPlayer->openFile(filePath);
 			if (m_p_gifPlayer->getFramesCount() < 2 || m_p_playerController->isPaused()){
-				m_p_texture->loadFromImage(*m_p_gifPlayer->nextFrame());
-				m_p_sprite->setTexture(*m_p_texture, true);
-				updateContent();
+				if (m_p_texture->loadFromImage(*m_p_gifPlayer->nextFrame())) {
+					m_p_sprite->setTexture(*m_p_texture, true);
+					updateContent();
+				}
 			}
 			m_justOpened = true;
 		} else {
@@ -150,10 +152,11 @@ void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
 		newFrame = m_p_gifPlayer->nextFrame();
 	}
 	if (newFrame) {
-		m_p_texture->loadFromImage(*newFrame);
-		m_p_sprite->setTexture(*m_p_texture, true);
-		updateContent();
-		refreshFlag = true;
+		if (m_p_texture->loadFromImage(*newFrame)) {
+			m_p_sprite->setTexture(*m_p_texture, true);
+			updateContent();
+			refreshFlag = true;
+		}
 	}
 }
 
@@ -162,7 +165,7 @@ void gui::Menu::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vec
 }
 
 void gui::Menu::onSizeChange(const sf::Vector2u& newSize) {
-	m_p_canvas->create(newSize.x, newSize.y);
+	if (!m_p_canvas->resize(sf::Vector2u(newSize.x, newSize.y))) return;
 	m_p_canvasSprite->setTexture(m_p_canvas->getTexture(), true);
 	if (m_p_contentPixels) delete[] m_p_contentPixels;
 	m_p_contentPixels = new sf::Color[newSize.x * newSize.y];
@@ -205,10 +208,10 @@ void gui::Menu::updateContent() {
 	const sf::FloatRect bounds = m_p_sprite->getLocalBounds();
 	const sf::Vector2u size = m_p_canvas->getSize();
 
-	sf::Vector2f scale(size.x / bounds.width, size.y / bounds.height);
+	sf::Vector2f scale(size.x / bounds.size.x, size.y / bounds.size.y);
 	if (m_keepAspectratio) scale = sf::Vector2f(std::min(scale.x, scale.y), std::min(scale.x, scale.y));
 	m_p_sprite->setScale(scale);
-	m_p_sprite->setPosition((size.x - bounds.width * scale.x) / 2.f, (size.y - bounds.height * scale.y) / 2.f);
+	m_p_sprite->setPosition(sf::Vector2f((size.x - bounds.size.x * scale.x) / 2.f, (size.y - bounds.size.y * scale.y) / 2.f));
 
 	m_p_canvas->clear(m_allowAlpha ? sf::Color::Transparent : sf::Color::Black);
 	m_p_canvas->draw(*m_p_sprite);

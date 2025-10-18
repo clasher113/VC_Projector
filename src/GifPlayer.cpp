@@ -29,7 +29,7 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 		close();
         return false;
     }
-	m_p_pixels->create(m_p_gifFile->SWidth, m_p_gifFile->SHeight, sf::Color::Transparent);
+	m_p_pixels->resize(sf::Vector2u(m_p_gifFile->SWidth, m_p_gifFile->SHeight), sf::Color::Transparent);
 
 	m_framesData.resize(m_p_gifFile->ImageCount);
 	for (int i = 0; i < m_p_gifFile->ImageCount; i++) {
@@ -60,20 +60,18 @@ const sf::Image* const GifPlayer::nextFrame() {
 	const ColorMapObject* colorMap = desc.ColorMap ? desc.ColorMap : m_p_gifFile->SColorMap;
 
 	sf::IntRect rect(
-		std::max(desc.Left, 0),
-		std::max(desc.Top, 0),
-		std::min(desc.Left + desc.Width, m_p_gifFile->SWidth),
-		std::min(desc.Top + desc.Height, m_p_gifFile->SHeight)
+		sf::Vector2i(std::max(desc.Left, 0), std::max(desc.Top, 0)),
+		sf::Vector2i(std::min(desc.Left + desc.Width, m_p_gifFile->SWidth), std::min(desc.Top + desc.Height, m_p_gifFile->SHeight))
 	);
 
-	for (int y = rect.top; y < rect.height; ++y) {
-		const GifByteType* src = saved.RasterBits + (desc.Width * (y - desc.Top) + (rect.left - desc.Left));
-		for (int x = rect.left; x < rect.width; ++x) {
+	for (int y = rect.position.y; y < rect.size.y; ++y) {
+		const GifByteType* src = saved.RasterBits + (desc.Width * (y - desc.Top) + (rect.position.x - desc.Left));
+		for (int x = rect.position.x; x < rect.size.x; ++x) {
 			int i = int(*src++);
 			i *= (unsigned)i < (unsigned)colorMap->ColorCount;
 			GifColorType color = colorMap->Colors[i];
 			if (colorMap && i != m_framesData[m_currentFrame].m_gcb.TransparentColor) {
-				m_p_pixels->setPixel(x, y, sf::Color(color.Red, color.Green, color.Blue));
+				m_p_pixels->setPixel(sf::Vector2u(x, y), sf::Color(color.Red, color.Green, color.Blue));
 			}
 		}
 	}

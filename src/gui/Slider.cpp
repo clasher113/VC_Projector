@@ -3,6 +3,7 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Window/Event.hpp>
+#include <algorithm>
 
 gui::Slider::Slider() :
 m_p_background(new sf::RectangleShape(sf::Vector2f(100.f, 30.f))),
@@ -21,25 +22,25 @@ gui::Slider::~Slider() {
 
 void gui::Slider::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector2f& offset) {
     const int lastValue = m_currentValue;
-    switch (event.type) {
-        case sf::Event::MouseButtonPressed :
-            if (event.mouseButton.button == sf::Mouse::Button::Left && m_hover) {
-                m_grabbed = true;
-            }
-            break;
-        case sf::Event::MouseButtonReleased :
-            m_grabbed = false;
-            break;
-        case sf::Event::MouseMoved :
-            m_hover = getTransform().transformRect(m_p_slider->getGlobalBounds()).contains(sf::Vector2f(event.mouseMove.x, event.mouseMove.y) - offset);
-            if (m_grabbed) {
-                m_currentValue = getValueFromPos(std::clamp(event.mouseMove.x - m_p_slider->getSize().x / 2.f,
-                    0.f, m_p_background->getSize().x - m_p_slider->getSize().x / 2.f));              
-            }
-            break;
+    if (const auto pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
+        if (pressed->button == sf::Mouse::Button::Left && m_hover) {
+            m_grabbed = true;
+        }
     }
+    else if (const auto released = event.getIf<sf::Event::MouseButtonReleased>()) {
+        if (released->button == sf::Mouse::Button::Left)
+            m_grabbed = false;
+    }
+    else if (const auto moved = event.getIf<sf::Event::MouseMoved>()){
+        m_hover = getTransform().transformRect(m_p_slider->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset);
+        if (m_grabbed) {
+            m_currentValue = getValueFromPos(std::clamp(moved->position.x - m_p_slider->getSize().x / 2.f,
+                0.f, m_p_background->getSize().x - m_p_slider->getSize().x / 2.f));
+        }
+    }
+
     if (m_currentValue != lastValue) {
-        m_p_slider->setPosition(getPosFromValue(), 0.f);
+        m_p_slider->setPosition(sf::Vector2f(getPosFromValue(), 0.f));
         if (m_callback) m_callback(m_currentValue);
         refreshFlag = true;
     }
@@ -61,7 +62,7 @@ void gui::Slider::setRange(int min, int max) {
 void gui::Slider::setValue(int value) {
     m_currentValue = value;
     m_currentValue = std::clamp(m_currentValue, m_min, m_max);
-    m_p_slider->setPosition(getPosFromValue(), 0.f);
+    m_p_slider->setPosition(sf::Vector2f(getPosFromValue(), 0.f));
     if (m_callback) m_callback(m_currentValue);
 }
 

@@ -1,6 +1,7 @@
 #include "Container.hpp"
 
 #include <SFML/Graphics/RenderTarget.hpp>
+#include <algorithm>
 
 gui::Container::Container() {
 }
