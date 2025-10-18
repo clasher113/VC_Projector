@@ -143,20 +143,13 @@ void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
 		m_justOpened = false;
 		return;
 	}
-	if (m_p_playerController->isPaused()) return;
 	if (m_p_gifPlayer->getFramesCount() < 2) return;
-	const sf::Image* newFrame = nullptr;
-	m_animationTimer += deltaTime;
-	while (m_animationTimer > m_p_gifPlayer->getCurrentFrameDuration()) {
-		m_animationTimer -= m_p_gifPlayer->getCurrentFrameDuration();
-		newFrame = m_p_gifPlayer->nextFrame();
-	}
-	if (newFrame) {
-		if (m_p_texture->loadFromImage(*newFrame)) {
-			m_p_sprite->setTexture(*m_p_texture, true);
-			updateContent();
-			refreshFlag = true;
-		}
+	m_p_gifPlayer->update(m_p_playerController->isPaused() ? 0.f : deltaTime);
+	const sf::Image* newFrame = m_p_gifPlayer->nextFrame();
+	if (newFrame && m_p_texture->loadFromImage(*newFrame)) {
+		m_p_sprite->setTexture(*m_p_texture, true);
+		updateContent();
+		refreshFlag = true;
 	}
 }
 

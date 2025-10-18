@@ -47,7 +47,6 @@ public:
 private:
     bool m_keepAspectratio = false, m_allowAlpha = false, m_justOpened = false;
     Mode m_mode = Mode::SCREEN;
-    float m_animationTimer = 0.f;
 
     GifPlayer* m_p_gifPlayer;
     PlayerController* m_p_playerController;
