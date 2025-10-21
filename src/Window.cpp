@@ -100,7 +100,7 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 
 	m_p_menu = new gui::Menu(m_font, captureSize, statusContainerSize.x - 10.f);
 	m_p_menu->setOnModeChangeCallback([this]() {
-		updateWindowSize();
+		updateWindowSize(m_captureSize);
 	});
 
 	setSize(captureSize);
@@ -126,10 +126,10 @@ vcp::Window::~Window() {
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
 }
 
-void vcp::Window::setSize(const sf::Vector2u& size) {
-	if (size == m_captureSize) return;
-	m_captureSize = size;
-	updateWindowSize();
+bool vcp::Window::setSize(const sf::Vector2u& size) {
+	if (size == m_captureSize) return true;
+	if (!updateWindowSize(size))
+		return false;
 
 	m_border.setSize(sf::Vector2f(size.x, size.y));
 	m_statusContainerSprite.setPosition(sf::Vector2f(0.f, size.y + BORDER_THICKNESS * 2));
@@ -159,6 +159,7 @@ void vcp::Window::setSize(const sf::Vector2u& size) {
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
 	m_p_pixels = new sf::Color[size.x * size.y];
 	m_updateRequire = true;
+	return true;
 }
 
 void vcp::Window::setPosition(const sf::Vector2i& position) {
@@ -174,6 +175,7 @@ void vcp::Window::setStatus(Status status) {
 		case Status::SYNCING: statusStr = "Syncing"; break;
 		case Status::READY: statusStr = "Ready"; break;
 		case Status::CAPTURING: statusStr = "Capturing"; break;
+		case Status::INITIALIZING: statusStr = "Initializing"; break;
 	}
 	m_statusText.setString("Status: " + statusStr);
 	m_updateRequire = true;
@@ -249,17 +251,18 @@ void vcp::Window::draw() {
 	m_updateRequire = false;
 }
 
-void vcp::Window::updateWindowSize() {
+bool vcp::Window::updateWindowSize(const sf::Vector2u& size) {
 	const sf::Vector2u menuSize(m_p_menu->getSize() + sf::Vector2f(5.f, 5.f));
-	const sf::Vector2u newSize(std::max(m_captureSize.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), menuSize.x),
-						   m_captureSize.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + menuSize.y);
+	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), menuSize.x),
+						   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + menuSize.y);
 
-	if (sf::WindowBase::getSize() != newSize) {
+	if (m_statusContainer.getSize() != newSize) {
+		if (!m_statusContainer.resize(sf::Vector2u(menuSize.x, menuSize.y))) 
+			return false;
+		m_statusContainerSprite.setTexture(m_statusContainer.getTexture(), true);
 		sf::WindowBase::setSize(newSize);
 		setView(sf::View(sf::Vector2f(newSize.x / 2.f, newSize.y / 2.f), sf::Vector2f(newSize)));
+		m_captureSize = size;
 	}
-	if (m_statusContainer.getSize() != menuSize) {
-		m_statusContainer.resize(sf::Vector2u(menuSize.x, menuSize.y));
-		m_statusContainerSprite.setTexture(m_statusContainer.getTexture(), true);
-	}
+	return true;
 }

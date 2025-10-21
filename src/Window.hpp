@@ -32,7 +32,7 @@ public:
     Window(const sf::Vector2u& captureSize);
     ~Window();
 
-    void setSize(const sf::Vector2u& size);
+    bool setSize(const sf::Vector2u& size);
     void setPosition(const sf::Vector2i& position);
     void setStatus(Status status);
 
@@ -59,7 +59,7 @@ private:
 
     gui::Menu* m_p_menu = nullptr;
 
-    void updateWindowSize();
+    bool updateWindowSize(const sf::Vector2u& size);
 
 #ifdef _WIN32
     BITMAPINFO m_bmi{};

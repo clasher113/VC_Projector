@@ -7,7 +7,8 @@ enum class Status {
 	CONNECTED,
 	SYNCING,
 	READY,
-	CAPTURING
+	CAPTURING,
+	INITIALIZING
 };
 
 enum BitMask : uint32_t {
