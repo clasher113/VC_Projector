@@ -3,17 +3,19 @@
 #include "network/Packet.hpp"
 #include "network/Network.hpp"
 
+#include <iostream>
+#include <algorithm>
 #include <SFML/System/Sleep.hpp>
 #include <SFML/Graphics/Image.hpp>
-#include <iostream>
 
 int main() {
 	SyncPacketIn syncPacket;
 
 	vcp::Window window(sf::Vector2u(syncPacket.captureSize.x, syncPacket.captureSize.y));
+	window.setFramerateLimit(syncPacket.framerate);
 	Network network;
 
-	Status currentStatus = Status::WAITING;
+	Status currentStatus = Status::WAITING, lastStatus = Status::NONE;
 	bool synchonized = false;
 
 	sf::Clock clock;
@@ -53,6 +55,7 @@ int main() {
 					if (syncSuccess) {
 						syncPacket = packet;
 						syncPacket.framerate = std::clamp<decltype(syncPacket.framerate)>(syncPacket.framerate, 30, 60);
+						window.setFramerateLimit(syncPacket.framerate);
 					}
 					synchonized = syncSuccess;
 
@@ -122,7 +125,10 @@ int main() {
 				}
 			}, nextPacket.value());
 		}
-		window.setStatus(currentStatus);
+		if (lastStatus != currentStatus){
+			lastStatus = currentStatus;
+			window.setStatus(currentStatus);
+		}
 		network.push();
 
 		window.pollEvents();

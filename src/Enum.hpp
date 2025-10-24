@@ -3,7 +3,8 @@
 #include <cstdint>
 
 enum class Status {
-	WAITING = 1,
+	NONE = 0,
+	WAITING,
 	CONNECTED,
 	SYNCING,
 	READY,

@@ -12,7 +12,9 @@ m_p_slider(new sf::RectangleShape(sf::Vector2f(20.f, 30.f)))
     m_p_background->setFillColor(sf::Color(100, 100, 100));
     m_p_background->setOutlineColor(sf::Color(35, 35, 35));
     m_p_background->setOutlineThickness(2.f);
+    m_p_background->setOrigin(sf::Vector2f(-2.f, -2.f));
     m_p_slider->setFillColor(sf::Color(150, 150, 150));
+    m_p_slider->setOrigin(m_p_background->getOrigin());
 }
 
 gui::Slider::~Slider() {
@@ -32,7 +34,7 @@ void gui::Slider::onEvent(const sf::Event& event, bool& refreshFlag, const sf::V
             m_grabbed = false;
     }
     else if (const auto moved = event.getIf<sf::Event::MouseMoved>()){
-        m_hover = getTransform().transformRect(m_p_slider->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset);
+        m_hover = getTransform().transformRect(m_p_background->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset);
         if (m_grabbed) {
             m_currentValue = getValueFromPos(std::clamp(moved->position.x - m_p_slider->getSize().x,
                 0.f, m_p_background->getSize().x - m_p_slider->getSize().x));
@@ -72,7 +74,8 @@ void gui::Slider::setOnValueChangeCallback(const std::function<void(int)>& callb
 }
 
 sf::Vector2f gui::Slider::getSize() const {
-    return m_p_background->getSize();
+    const float outlineThickness = m_p_background->getOutlineThickness() * 2.f;
+    return m_p_background->getSize() + sf::Vector2f(outlineThickness, outlineThickness);
 }
 
 void gui::Slider::draw(sf::RenderTarget& target, sf::RenderStates states) const {

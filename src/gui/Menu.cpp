@@ -3,6 +3,7 @@
 #include "Button.hpp"
 #include "Container.hpp"
 #include "../GifPlayer.hpp"
+#include "../Window.hpp"
 #include "PlayerController.hpp"
 #include "portable-file-dialogs.h"
 
@@ -22,7 +23,7 @@ struct Image {
 	sf::Texture* m_p_texture;
 };
 
-gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float width) :
+gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& canvasSize, float width) :
 	m_p_texture(new sf::Texture),
 	m_p_sprite(new sf::Sprite(*m_p_texture)),
 	m_p_canvas(new sf::RenderTexture()),
@@ -32,24 +33,28 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 {
 	onSizeChange(canvasSize);
 
-	m_p_imageContainer = new gui::Container;
-	m_p_imageContainer->setPosition(sf::Vector2f(5.f, 65.f));
-
-	m_p_imageContainer->addElement(m_p_playerController);
+	m_p_imageContainer = new gui::Container(true);
+	m_p_imageContainer->setPosition(sf::Vector2f(0.f, 60.f));
+	m_p_imageContainer->setInteval(3.f);
 
 	gui::Button* button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
-	button->setPosition(sf::Vector2f(0.f, 60.f));
 	button->setText("Choose Image");
-	button->setCallback([this]() {
+	button->setCallback([this, &window]() {
 		pfd::open_file path("Choose Image", "", { "Images", "*.png *.jpg *.bmp *.tga *.gif" });
+		window.setIconified(true);
+		std::vector<std::string> result = path.result();
+		window.setIconified(false);
 		if (path.result().empty()) return;
 		m_p_gifPlayer->close();
 		fs::path filePath(path.result().back());
 		if (filePath.extension() == ".gif") {
+			m_p_imageContainer->removeElement(m_p_playerController);
 			m_p_gifPlayer->openFile(filePath);
+			if (m_p_gifPlayer->getFramesCount() > 1) m_p_imageContainer->addElement(m_p_playerController, 0);
 			if (m_p_gifPlayer->getFramesCount() < 2 || m_p_playerController->isPaused()){
-				if (m_p_texture->loadFromImage(*m_p_gifPlayer->nextFrame())) {
+				const sf::Image* const frame = m_p_gifPlayer->nextFrame();
+				if (frame && m_p_texture->loadFromImage(*frame)) {
 					m_p_sprite->setTexture(*m_p_texture, true);
 					updateContent();
 				}
@@ -63,12 +68,12 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 			m_p_sprite->setTexture(*m_p_texture, true);
 			updateContent();
 		}
+		if (m_onModeChangeCallback) m_onModeChangeCallback();
 	});
 	m_p_imageContainer->addElement(button);
 
 	button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
-	button->setPosition(sf::Vector2f(0.f, 95.f));
 	auto alphaButtonText = [this]() {
 		return std::string("Allow alpha: ") + (m_allowAlpha ? "True" : "False");
 	};
@@ -84,31 +89,29 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 
 	button = new gui::Button(font);
 	button->setSize(sf::Vector2f(width, 30.f));
-	button->setPosition(sf::Vector2f(0.f, 130.f));
 	auto aspectRatioText = [this]() {
-		return std::string("Keep aspect ratio: ") + (m_keepAspectratio ? "True" : "False");
+		return std::string("Stretch to screen: ") + (m_stretchToScreen ? "True" : "False");
 	};
 	button->setText(aspectRatioText());
 	button->setCallback([this, button, aspectRatioText]() {
-		m_keepAspectratio = !m_keepAspectratio;
+		m_stretchToScreen = !m_stretchToScreen;
 		updateContent();
 		button->setText(aspectRatioText());
 	});
 	m_p_imageContainer->addElement(button);
 
 	button = new gui::Button(font);
-	auto setMode = [this, button]() {
+	auto setMode = [this, &window, button]() {
 		clearMainContainer();
 		std::string modeStr = "Mode: ";
-		int height = 0;
 		switch (m_mode) {
 			case Mode::SCREEN:
-				height = 65;
 				modeStr.append("Screen");
+				window.setAlwaysOnTop(true);
 				break;
 			case Mode::IMAGE:
-				height = 170;
 				modeStr.append("Image");
+				window.setAlwaysOnTop(false);
 				m_p_mainContainer->addElement(m_p_imageContainer);
 				break;
 		}
@@ -121,7 +124,7 @@ gui::Menu::Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float widt
 		setMode();
 	});
 
-	button->setPosition(sf::Vector2f(5.f, 30.f));
+	button->setPosition(sf::Vector2f(3.f, 25.f));
 	button->setSize(sf::Vector2f(width, 30.f));
 	m_p_mainContainer->addElement(button);
 }
@@ -182,7 +185,8 @@ Mode gui::Menu::getMode() const {
 }
 
 sf::Vector2f gui::Menu::getSize() const {
-	return m_p_mainContainer->getSize();
+	if (m_mode == Mode::SCREEN) return m_p_mainContainer->getSize() + sf::Vector2f(3.f, 3.f);
+	else return m_p_mainContainer->getSize();
 }
 
 bool gui::Menu::isCursorOverElement(const sf::Vector2f& cursorPos) {
@@ -202,7 +206,7 @@ void gui::Menu::updateContent() {
 	const sf::Vector2u size = m_p_canvas->getSize();
 
 	sf::Vector2f scale(size.x / bounds.size.x, size.y / bounds.size.y);
-	if (m_keepAspectratio) scale = sf::Vector2f(std::min(scale.x, scale.y), std::min(scale.x, scale.y));
+	if (!m_stretchToScreen) scale = sf::Vector2f(std::min(scale.x, scale.y), std::min(scale.x, scale.y));
 	m_p_sprite->setScale(scale);
 	m_p_sprite->setPosition(sf::Vector2f((size.x - bounds.size.x * scale.x) / 2.f, (size.y - bounds.size.y * scale.y) / 2.f));
 

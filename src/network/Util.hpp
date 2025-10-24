@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <cstring>
 #include <SFML/Network/Socket.hpp>
 
 #define REFNSIZE(VALUE) &VALUE, sizeof(VALUE)

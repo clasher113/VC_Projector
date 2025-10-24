@@ -33,8 +33,6 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 	// enable window transparency
 	SetWindowLong(getNativeHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
 	DwmExtendFrameIntoClientArea(getNativeHandle(), &margins);
-	// make window always on top
-	SetWindowPos(getNativeHandle(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 	HWND desktop = GetDesktopWindow();
 	m_desktopHdc = GetDC(desktop);
@@ -89,8 +87,10 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 #endif // _WIN32
 	
 	setTitle("Projector server");
+	setAlwaysOnTop(true);
 
 	m_statusContainer.resize(sf::Vector2u(statusContainerSize.x, statusContainerSize.y));
+	m_statusText.setPosition(sf::Vector2f(3.f, 0.f));
 
 	m_border.setFillColor(sf::Color::Transparent);
 	m_border.setOutlineColor(sf::Color::Yellow);
@@ -98,7 +98,7 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 	m_border.setPosition(sf::Vector2f(BORDER_THICKNESS, BORDER_THICKNESS));
 	m_border.setSize(sf::Vector2f(captureSize.x, captureSize.y));
 
-	m_p_menu = new gui::Menu(m_font, captureSize, statusContainerSize.x - 10.f);
+	m_p_menu = new gui::Menu(*this, m_font, captureSize, statusContainerSize.x - 10.f);
 	m_p_menu->setOnModeChangeCallback([this]() {
 		updateWindowSize(m_captureSize);
 	});
@@ -181,12 +181,54 @@ void vcp::Window::setStatus(Status status) {
 	m_updateRequire = true;
 }
 
+void vcp::Window::setAlwaysOnTop(bool flag) {
+#ifdef _WIN32
+	SetWindowPos(getNativeHandle(), flag ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+#elif __linux__
+	XClientMessageEvent xClient;
+	xClient.type = ClientMessage;
+	xClient.window = m_window;
+	xClient.message_type = XInternAtom(m_p_display, "_NET_WM_STATE", False);
+	xClient.format = 32;
+	xClient.data.l[0] = static_cast<long>(flag);
+	xClient.data.l[1] = XInternAtom(m_p_display, "_NET_WM_STATE_ABOVE", False);
+
+	XSendEvent(m_p_display, m_rootWindow, False, SubstructureNotifyMask | SubstructureRedirectMask, (XEvent*)&xClient);
+	XFlush(m_p_display);
+#endif // _WIN32
+}
+
+void vcp::Window::setIconified(bool flag) {
+#ifdef _WIN32
+	ShowWindow(getNativeHandle(), flag ? SW_SHOWMINIMIZED : SW_RESTORE);
+#elif __linux__
+	if (flag) {
+		XIconifyWindow(m_p_display, m_window, DefaultScreen(m_p_display));
+	}
+	else {
+		XClientMessageEvent xClient;
+		xClient.type = ClientMessage;
+		xClient.window = m_window;
+		xClient.message_type = XInternAtom(m_p_display, "_NET_ACTIVE_WINDOW", True);
+		xClient.format = 32;
+		xClient.data.l[0] = 1;
+
+		XSendEvent(m_p_display, m_rootWindow, False, SubstructureRedirectMask | SubstructureNotifyMask, (XEvent*)&xClient);
+	}
+	XFlush(m_p_display);
+#endif // _WIN32
+}
+
 void vcp::Window::onUpdate(const float deltaTime) {
 	m_p_menu->onUpdate(deltaTime, m_updateRequire);
 }
 
 void vcp::Window::pollEvents() {
 	if (m_grabbed) m_grabbed = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+	if (m_grabbed) {
+		sf::WindowBase::setPosition(sf::Mouse::getPosition() + m_grabbedOffset);
+		m_updateRequire = true;
+	}
 
 	while (const auto e = sf::WindowBase::pollEvent()) {
 		m_p_menu->onEvent(e.value(), m_updateRequire, m_statusContainerSprite.getPosition());
@@ -204,10 +246,6 @@ void vcp::Window::pollEvents() {
 				m_grabbed = false;
 			else if (released->button == sf::Mouse::Button::Right)
 				sf::WindowBase::close();
-		}
-		else if (e->is<sf::Event::MouseMoved>()) {
-			if (m_grabbed)
-				sf::WindowBase::setPosition(sf::Mouse::getPosition() + m_grabbedOffset);
 		}
 	}
 }
@@ -252,12 +290,12 @@ void vcp::Window::draw() {
 }
 
 bool vcp::Window::updateWindowSize(const sf::Vector2u& size) {
-	const sf::Vector2u menuSize(m_p_menu->getSize() + sf::Vector2f(5.f, 5.f));
+	const sf::Vector2u menuSize(m_p_menu->getSize());
 	const sf::Vector2u newSize(std::max(size.x + static_cast<unsigned int>(BORDER_THICKNESS * 2), menuSize.x),
 						   size.y + static_cast<unsigned int>(BORDER_THICKNESS * 2) + menuSize.y);
 
 	if (m_statusContainer.getSize() != newSize) {
-		if (!m_statusContainer.resize(sf::Vector2u(menuSize.x, menuSize.y))) 
+		if (!m_statusContainer.resize(sf::Vector2u(menuSize.x, menuSize.y)))
 			return false;
 		m_statusContainerSprite.setTexture(m_statusContainer.getTexture(), true);
 		sf::WindowBase::setSize(newSize);

@@ -19,8 +19,8 @@ m_p_text(new sf::Text(font, "", 20U))
 {
 	player->setController(this);
 	generateTextures();
-	
-	m_p_text->setPosition(sf::Vector2f(width, 20.f));
+
+	m_p_text->setPosition(sf::Vector2f(width, 25.f));
 	updateText(0);
 
 	m_p_slider->setSize(sf::Vector2f(width, 20.f));

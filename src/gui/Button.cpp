@@ -26,6 +26,7 @@ Button::Button(const sf::Font& font) :
 	m_p_shape->setFillColor(IDLE_COLOR);
 	m_p_shape->setOutlineColor(sf::Color(35, 35, 35));
 	m_p_shape->setOutlineThickness(2.f);
+	m_p_shape->setOrigin(sf::Vector2f(-2.f, -2.f));
 
 	centerText();
 }
@@ -105,7 +106,8 @@ void Button::setSize(const sf::Vector2f& size) {
 }
 
 sf::Vector2f gui::Button::getSize() const {
-	return m_p_shape->getSize();
+	const float outlineThickness = m_p_shape->getOutlineThickness() * 2.f;
+	return m_p_shape->getSize() + sf::Vector2f(outlineThickness, outlineThickness);
 }
 
 void Button::draw(sf::RenderTarget& target, sf::RenderStates states) const {

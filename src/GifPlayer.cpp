@@ -19,6 +19,7 @@ GifPlayer::~GifPlayer() {
 
 bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 	m_currentFrame = 0;
+	m_lastFrame = -1;
     if (m_p_gifFile) close();
     int error = D_GIF_SUCCEEDED;
 	m_p_gifFile = DGifOpenFileName(filePath.string().c_str(), &error);

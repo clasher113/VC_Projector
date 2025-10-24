@@ -7,7 +7,9 @@
 #include <functional>
 
 class GifPlayer;
-
+namespace vcp {
+    class Window;
+}
 namespace gui {
     class Menu;
     class Button;
@@ -26,7 +28,7 @@ namespace sf {
 
 class gui::Menu : public gui::Widget {
 public:
-    Menu(const sf::Font& font, const sf::Vector2u& canvasSize, float width);
+    Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& canvasSize, float width);
     ~Menu();
 
     void onUpdate(const float deltaTime, bool& refreshFlag);
@@ -45,7 +47,7 @@ public:
     sf::Image* m_p_currentImage = nullptr;
 
 private:
-    bool m_keepAspectratio = false, m_allowAlpha = false, m_justOpened = false;
+    bool m_stretchToScreen = true, m_allowAlpha = false, m_justOpened = false;
     Mode m_mode = Mode::SCREEN;
 
     GifPlayer* m_p_gifPlayer;

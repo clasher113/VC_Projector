@@ -35,6 +35,8 @@ public:
     bool setSize(const sf::Vector2u& size);
     void setPosition(const sf::Vector2i& position);
     void setStatus(Status status);
+    void setAlwaysOnTop(bool flag);
+    void setIconified(bool flag);
 
     void onUpdate(const float deltaTime);
     void pollEvents();
