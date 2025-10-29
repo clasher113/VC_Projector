@@ -7,20 +7,14 @@
 
 const size_t KEY_FRAMES_INTERVAL = 40; // frames
 
-GifPlayer::GifPlayer() :
-m_p_pixels(new sf::Image())
-{
-}
+GifPlayer::GifPlayer() {}
 
 GifPlayer::~GifPlayer() {
     close();
-	delete m_p_pixels;
 }
 
 bool GifPlayer::openFile(const std::filesystem::path& filePath) {
-	m_currentFrame = 0;
-	m_lastFrame = -1;
-    if (m_p_gifFile) close();
+    close();
     int error = D_GIF_SUCCEEDED;
 	m_p_gifFile = DGifOpenFileName(filePath.string().c_str(), &error);
     if (!m_p_gifFile) {
@@ -36,15 +30,19 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 		m_p_controller->onFileOpen(m_p_gifFile->ImageCount - 1);
 		m_p_controller->onNewFrame(m_currentFrame);
 	}
-	m_p_pixels->resize(sf::Vector2u(m_p_gifFile->SWidth, m_p_gifFile->SHeight), sf::Color::Transparent);
+	m_p_pixels = new uint8_t[m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4];
 
 	m_framesData.resize(m_p_gifFile->ImageCount);
-	for (int i = 0; i < m_p_gifFile->ImageCount; i++) {
-		const SavedImage& saved = m_p_gifFile->SavedImages[i];
-		FrameData& data = m_framesData[i];
+	for (; m_currentFrame < m_p_gifFile->ImageCount; m_currentFrame++) {
+		const SavedImage& saved = m_p_gifFile->SavedImages[m_currentFrame];
+		FrameData& data = m_framesData[m_currentFrame];
+
+		data.m_rect = sf::IntRect(
+			sf::Vector2i(std::max(saved.ImageDesc.Left, 0), std::max(saved.ImageDesc.Top, 0)),
+			sf::Vector2i(std::min(saved.ImageDesc.Left + saved.ImageDesc.Width, m_p_gifFile->SWidth), std::min(saved.ImageDesc.Top + saved.ImageDesc.Height, m_p_gifFile->SHeight))
+		);
 
 		data.m_gcb.TransparentColor = NO_TRANSPARENT_COLOR;
-
 		for (const ExtensionBlock* extensionBlock = saved.ExtensionBlocks + saved.ExtensionBlockCount; extensionBlock-- != saved.ExtensionBlocks;) {
 			if (extensionBlock->Function == GRAPHICS_EXT_FUNC_CODE && DGifExtensionToGCB(extensionBlock->ByteCount, extensionBlock->Bytes, &data.m_gcb) == GIF_OK) {
 				data.m_duration = static_cast<float>(data.m_gcb.DelayTime) / 100.f;
@@ -53,9 +51,8 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 		}
 		if (m_p_gifFile->ImageCount > KEY_FRAMES_INTERVAL) {
 			nextFrame();
-			m_currentFrame++;
-			if (i % KEY_FRAMES_INTERVAL == 0) {
-				m_keyFrames.emplace(i, sf::Image(m_p_pixels->getSize(), m_p_pixels->getPixelsPtr()));
+			if (m_currentFrame % KEY_FRAMES_INTERVAL == 0) {
+				m_keyFrames.emplace(m_currentFrame, sf::Image(getSize(), m_p_pixels));
 			}
 		}
 	}
@@ -64,23 +61,57 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
     return true;
 }
 
-const sf::Image* const GifPlayer::nextFrame() {
-	if (m_currentFrame >= m_p_gifFile->ImageCount) return nullptr;
-	if (m_lastFrame == m_currentFrame) return nullptr;
+const uint8_t* const GifPlayer::nextFrame() {
+	if (m_lastFrame == m_currentFrame) return m_p_pixels;
 	m_lastFrame = m_currentFrame;
 	const auto it = m_keyFrames.find(m_currentFrame);
 	if (it != m_keyFrames.end()) {
-		m_p_pixels->copy(it->second, sf::Vector2u(0, 0), sf::IntRect(), true);
+		memcpy(m_p_pixels, it->second.getPixelsPtr(), m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4);
 	}
 	else {
 		const SavedImage& saved = m_p_gifFile->SavedImages[m_currentFrame];
 		const GifImageDesc& desc = saved.ImageDesc;
 		const ColorMapObject* colorMap = desc.ColorMap ? desc.ColorMap : m_p_gifFile->SColorMap;
+		const FrameData& frameData = m_framesData[m_currentFrame];
+		const sf::IntRect& rect = frameData.m_rect;
+		int imageIndex = m_currentFrame % m_p_gifFile->ImageCount;
 
-		sf::IntRect rect(
-			sf::Vector2i(std::max(desc.Left, 0), std::max(desc.Top, 0)),
-			sf::Vector2i(std::min(desc.Left + desc.Width, m_p_gifFile->SWidth), std::min(desc.Top + desc.Height, m_p_gifFile->SHeight))
-		);
+		if (frameData.m_gcb.TransparentColor >= 0 || rect.position.x > 0 || rect.size.x < m_p_gifFile->SWidth || rect.position.y > 0 || 
+			rect.size.y < m_p_gifFile->SHeight || frameData.m_gcb.DisposalMode == DISPOSE_PREVIOUS) {
+			if (!imageIndex) memset(m_p_pixels, 0, m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4);
+			else if (m_disposal == DISPOSE_BACKGROUND || m_disposal == DISPOSE_PREVIOUS) {
+				const sf::IntRect& prevRect = m_framesData[imageIndex - 1].m_rect;
+				uint8_t* dst = m_p_pixels + (m_p_gifFile->SWidth * prevRect.position.y + prevRect.position.x) * 4;
+				if (m_disposal == DISPOSE_PREVIOUS) {
+					uint8_t* src = m_p_pixels + m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4;
+					for (int y = 0; y < prevRect.size.y - prevRect.position.y; ++y) {
+						memcpy(dst, src, (prevRect.size.x - prevRect.position.x) * 4);
+						dst += m_p_gifFile->SWidth * 4;
+						src += (prevRect.size.x - prevRect.position.x) * 4;
+					}
+				}
+				else {
+					for (int y = 0; y < prevRect.size.y - prevRect.position.y; ++y) {
+						memset(dst, 0, (prevRect.size.x - prevRect.position.x) * 4);
+						dst += m_p_gifFile->SWidth * 4;
+					}
+				}
+			}
+		}
+
+		m_disposal = frameData.m_gcb.DisposalMode;
+		if (m_disposal == DISPOSE_PREVIOUS) {
+			if (imageIndex && imageIndex < m_p_gifFile->ImageCount - 1) {
+				uint8_t* dst = m_p_pixels + m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4;
+				uint8_t* src = m_p_pixels + (m_p_gifFile->SWidth * rect.position.y + rect.position.x) * 4;
+				for (int y = 0; y < rect.size.y - rect.position.y; ++y) {
+					memcpy(dst, src, (rect.size.x - rect.position.x) * 4);
+					dst += (rect.size.x - rect.position.x) * 4;
+					src += m_p_gifFile->SWidth * 4;
+				}
+			}
+			else m_disposal = DISPOSE_PREVIOUS;
+		}
 
 		for (int y = rect.position.y; y < rect.size.y; ++y) {
 			const GifByteType* src = saved.RasterBits + (desc.Width * (y - desc.Top) + (rect.position.x - desc.Left));
@@ -88,8 +119,12 @@ const sf::Image* const GifPlayer::nextFrame() {
 				int i = int(*src++);
 				i *= (unsigned)i < (unsigned)colorMap->ColorCount;
 				GifColorType color = colorMap->Colors[i];
-				if (colorMap && i != m_framesData[m_currentFrame].m_gcb.TransparentColor) {
-					m_p_pixels->setPixel(sf::Vector2u(x, y), sf::Color(color.Red, color.Green, color.Blue));
+				if (colorMap && i != frameData.m_gcb.TransparentColor) {
+					uint8_t* dst = &m_p_pixels[(y * m_p_gifFile->SWidth + x) * 4];
+					dst[0] = color.Red;
+					dst[1] = color.Green;
+					dst[2] = color.Blue;
+					dst[3] = 255;
 				}
 			}
 		}
@@ -124,8 +159,8 @@ void GifPlayer::setFrameNum(size_t frame) {
 	if (frame < m_currentFrame || frame - m_currentFrame > frame - closestKeyFrame) m_currentFrame = closestKeyFrame;
 
 	while (m_currentFrame < frame) {
-		m_currentFrame++;
 		nextFrame();
+		m_currentFrame++;
 	}
 	m_lastFrame = lastFrame;
 }
@@ -138,17 +173,30 @@ size_t GifPlayer::getFramesCount() const {
 	return m_p_gifFile ? m_p_gifFile->ImageCount - 1 : 0;
 }
 
+sf::Vector2u GifPlayer::getSize() const {
+	return m_p_gifFile ? sf::Vector2u(m_p_gifFile->SWidth, m_p_gifFile->SHeight) : sf::Vector2u();
+}
+
+bool GifPlayer::hasNewFrame() const {
+	return m_p_gifFile != nullptr && m_lastFrame != m_currentFrame;
+}
+
 float GifPlayer::getCurrentFrameDuration() const {
 	return m_framesData.empty() ? -1 : m_framesData[m_currentFrame].m_duration;
 }
 
 void GifPlayer::close() {
+	if (m_p_pixels) {
+		delete[] m_p_pixels;
+		m_p_pixels = nullptr;
+	}
     if (m_p_gifFile) {
         int error = D_GIF_SUCCEEDED;
         DGifCloseFile(m_p_gifFile, &error);
 		m_p_gifFile = nullptr;
     }
     m_currentFrame = 0;
+	m_lastFrame = -1;
 	m_framesData.clear();
 	m_keyFrames.clear();
 }
