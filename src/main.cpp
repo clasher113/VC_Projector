@@ -79,12 +79,22 @@ int main() {
 								const size_t read_x = static_cast<size_t>(x * scale_x);
 								const size_t read_y = static_cast<size_t>(y * scale_y);
 								const sf::Color& pixel = pixels[read_y * syncPacket.captureSize.x + read_x];
+								const bool transparent = pixel.a == 0;
 								if (packet.rgbMode) {
+									if (transparent) {
+										capturePacketOut.pixels.emplace_back(255);
+										capturePacketOut.pixels.emplace_back(255);
+									}
+									else {
 									capturePacketOut.pixels.emplace_back(pixel.b / 16 | pixel.g / 16 << 4);
 									capturePacketOut.pixels.emplace_back(pixel.r / 16);
 								}
+								}
+								else {
+									if (transparent) capturePacketOut.pixels.emplace_back(255);
 								else capturePacketOut.pixels.emplace_back(static_cast<uint8_t>((0.2126 * (pixel.b / 255.f) + 0.7152 * (pixel.g / 255.f) + 0.0722 * (pixel.r / 255.f)) * 15));
 							}
+						}
 						}
 
 						network.pushPacket(capturePacketOut);
