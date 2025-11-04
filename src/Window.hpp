@@ -41,7 +41,7 @@ public:
     void onUpdate(const float deltaTime);
     void pollEvents();
 
-    sf::Color* capture();
+    const sf::Color* const capture();
 
     void draw();
 

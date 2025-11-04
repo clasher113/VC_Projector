@@ -26,7 +26,6 @@ public:
     void pushPacket(OutPacketTypes outPacket);
 
 private:
-    bool m_connected = false;
     float m_reconnectTimer = 0.f;
     sf::TcpSocket m_socket;
 

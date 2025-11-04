@@ -24,12 +24,11 @@ Network::~Network() {
 }
 
 void Network::update(float deltaTime) {
-	if (!m_connected) {
+	if (!isConnected()) {
 		m_reconnectTimer += deltaTime;
 		if (m_reconnectTimer > RECONNECT_INTERVAL) {
 			m_reconnectTimer = 0.f;
 			if (m_socket.connect(REMOTE_ADDRESS, REMOTE_PORT, sf::seconds(0.01f)) == sf::Socket::Status::Done) {
-				m_connected = true;
 				COUT("Connected to the server");
 			}
 		}
@@ -37,7 +36,7 @@ void Network::update(float deltaTime) {
 }
 
 void Network::pull() {
-	if (!m_connected) return;
+	if (!isConnected()) return;
 	std::vector<uint8_t> inBuffer;
 	if (receive(inBuffer) == sf::Socket::Status::Disconnected) {
 		COUT("Server disconnected");
@@ -50,7 +49,7 @@ void Network::pull() {
 }
 
 void Network::push() {
-	if (!m_connected) return;
+	if (!isConnected()) return;
 	if (!m_outPacketQueue.empty()) {
 		std::vector<uint8_t> data = assemble();
 		send(data.data(), static_cast<uint32_t>(data.size()));
@@ -58,14 +57,13 @@ void Network::push() {
 }
 
 void Network::disconnect() {
-	if (!m_connected) return;
+	if (!isConnected()) return;
 	m_socket.disconnect();
 	m_socket.setBlocking(true);
-	m_connected = false;
 }
 
 bool Network::isConnected() const {
-	return m_connected;
+	return m_socket.getRemotePort() != 0;
 }
 
 std::optional<InPacketTypes> Network::getNextPacket() {
@@ -195,7 +193,7 @@ std::vector<uint8_t> Network::assemble() {
 				bitMask |= BitMask::CAPTURE;
 				packData(data, REFNSIZE(packet.captureStatus));
 				if (packet.captureStatus) {
-					uint32_t size = static_cast<uint32_t>(packet.pixels.size());
+					const uint32_t size = static_cast<uint32_t>(packet.pixels.size());
 					packData(data, REFNSIZE(size));
 					packData(data, packet.pixels.data(), size);
 				}
@@ -204,7 +202,7 @@ std::vector<uint8_t> Network::assemble() {
 				bitMask |= BitMask::INIT;
 				packData(data, REFNSIZE(packet.initStatus));
 				if (packet.initStatus) {
-					uint32_t size = static_cast<uint32_t>(packet.texturesColors.size());
+					const uint32_t size = static_cast<uint32_t>(packet.texturesColors.size()) * sizeof(*packet.texturesColors.data());
 					packData(data, REFNSIZE(size));
 					packData(data, packet.texturesColors.data(), size);				
 				}

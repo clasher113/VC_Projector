@@ -63,43 +63,42 @@ int main() {
 					currentStatus = Status::SYNCING;
 				}
 				else if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, CapturePacketIn>) {
-					if (packet.capture) {
-						currentStatus = Status::CAPTURING;
+					if (!packet.capture) return;
+					currentStatus = Status::CAPTURING;
 
-						sf::Color* pixels = window.capture();
+					const sf::Color* const pixels = window.capture();
 
-						CapturePacketOut capturePacketOut;
-						capturePacketOut.pixels.reserve(syncPacket.projectionSize.x * syncPacket.projectionSize.y * (packet.rgbMode ? 3 : 1));
+					CapturePacketOut capturePacketOut;
+					capturePacketOut.pixels.reserve(syncPacket.projectionSize.x * syncPacket.projectionSize.y * (packet.rgbMode ? 2 : 1));
 
-						const float scale_x = static_cast<float>(syncPacket.captureSize.x) / syncPacket.projectionSize.x;
-						const float scale_y = static_cast<float>(syncPacket.captureSize.y) / syncPacket.projectionSize.y;
+					const float scale_x = static_cast<float>(syncPacket.captureSize.x) / syncPacket.projectionSize.x;
+					const float scale_y = static_cast<float>(syncPacket.captureSize.y) / syncPacket.projectionSize.y;
 
-						for (size_t x = 0; x < syncPacket.projectionSize.x; x++) {
-							for (size_t y = 0; y < syncPacket.projectionSize.y; y++) {
-								const size_t read_x = static_cast<size_t>(x * scale_x);
-								const size_t read_y = static_cast<size_t>(y * scale_y);
-								const sf::Color& pixel = pixels[read_y * syncPacket.captureSize.x + read_x];
-								const bool transparent = pixel.a == 0;
-								if (packet.rgbMode) {
-									if (transparent) {
-										capturePacketOut.pixels.emplace_back(255);
-										capturePacketOut.pixels.emplace_back(255);
-									}
-									else {
+					for (size_t x = 0; x < syncPacket.projectionSize.x; x++) {
+						for (size_t y = 0; y < syncPacket.projectionSize.y; y++) {
+							const size_t read_x = static_cast<size_t>(x * scale_x);
+							const size_t read_y = static_cast<size_t>(y * scale_y);
+							const sf::Color& pixel = pixels[read_y * syncPacket.captureSize.x + read_x];
+							const bool transparent = pixel.a == 0;
+							if (packet.rgbMode) {
+								if (transparent) {
+									capturePacketOut.pixels.emplace_back(255);
+									capturePacketOut.pixels.emplace_back(255);
+								}
+								else {
 									capturePacketOut.pixels.emplace_back(pixel.b / 16 | pixel.g / 16 << 4);
 									capturePacketOut.pixels.emplace_back(pixel.r / 16);
 								}
-								}
-								else {
-									if (transparent) capturePacketOut.pixels.emplace_back(255);
+							}
+							else {
+								if (transparent) capturePacketOut.pixels.emplace_back(255);
 								else capturePacketOut.pixels.emplace_back(static_cast<uint8_t>((0.2126 * (pixel.b / 255.f) + 0.7152 * (pixel.g / 255.f) + 0.0722 * (pixel.r / 255.f)) * 15));
 							}
 						}
-						}
-
-						network.pushPacket(capturePacketOut);
-						currentStatus = Status::CAPTURING;
 					}
+
+					network.pushPacket(capturePacketOut);
+					currentStatus = Status::CAPTURING;
 				}
 				else if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, InitPacketIn>) {
 					InitPacketOut initPacketOut;
@@ -110,15 +109,13 @@ int main() {
 
 						uint32_t textureSize = unpackData<uint32_t>(texturesData);
 
-						std::vector<uint8_t> texture(textureSize);
-						memcpy(texture.data(), texturesData, textureSize);
-						texturesData = static_cast<const uint8_t*>(texturesData) + textureSize;
-
 						sf::Image image;
-						if (image.loadFromMemory(texture.data(), textureSize) == false) {
+						if (image.loadFromMemory(texturesData, textureSize) == false) {
 							initPacketOut.initStatus = 0;
 							break;
 						}
+						texturesData = static_cast<const uint8_t*>(texturesData) + textureSize;
+
 						uint64_t color[3] = {};
 						for (size_t i = 0; i < image.getSize().x * image.getSize().y * 4; i += 4) {
 							const uint8_t alpha = image.getPixelsPtr()[i + 3];
@@ -128,7 +125,7 @@ int main() {
 							}
 						}
 						for (size_t i = 0; i < 3; i++) {
-							initPacketOut.texturesColors.emplace_back(static_cast<uint8_t>(color[i] /= (image.getSize().x * image.getSize().y)));
+							initPacketOut.texturesColors.emplace_back(static_cast<uint8_t>(color[i] / (image.getSize().x * image.getSize().y)));
 						}
 					}
 					

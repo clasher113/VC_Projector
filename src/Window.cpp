@@ -250,7 +250,7 @@ void vcp::Window::pollEvents() {
 	}
 }
 
-sf::Color* vcp::Window::capture() {
+const sf::Color* const vcp::Window::capture() {
 	if (m_p_menu->getMode() == Mode::SCREEN) {
 #ifdef _WIN32
 		BitBlt(m_hCaptureDC, 0, 0, m_captureSize.x, m_captureSize.y, m_desktopHdc,
