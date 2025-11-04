@@ -109,14 +109,16 @@ int main() {
 							initPacketOut.initStatus = 0;
 							break;
 						}
-						uint64_t color[4] = {};
+						uint64_t color[3] = {};
 						for (size_t i = 0; i < image.getSize().x * image.getSize().y * 4; i += 4) {
-							for (size_t j = 0; j < 4; j++) {
-								color[j] += image.getPixelsPtr()[i + j];
+							const uint8_t alpha = image.getPixelsPtr()[i + 3];
+							for (size_t j = 0; j < 3; j++) {
+								const uint8_t component = image.getPixelsPtr()[i + j];
+								color[j] += component + ((255 - component) * (static_cast<float>(255 - alpha) / 255));
 							}
 						}
-						for (size_t i = 0; i < 4; i++) {
-							initPacketOut.texturesColors.emplace_back(static_cast<uint8_t>(color[i] / (image.getSize().x * image.getSize().y)));
+						for (size_t i = 0; i < 3; i++) {
+							initPacketOut.texturesColors.emplace_back(static_cast<uint8_t>(color[i] /= (image.getSize().x * image.getSize().y)));
 						}
 					}
 					
