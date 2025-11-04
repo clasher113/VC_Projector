@@ -11,6 +11,16 @@ local addon_id = "projector_rgb_addon"
 local textures = {}
 local blocks = {}
 
+local function pack_color(rgb)
+	return bit.bor(bit.bor(math.floor(rgb[1] / 16), 
+		bit.lshift(math.floor(rgb[2] / 16), 4)), 
+		bit.lshift(math.floor(rgb[3] / 16), 8))
+end
+
+local function unpack_color(rgb)
+	return { bit.band(rgb, 0x00F), bit.rshift(bit.band(rgb, 0x0F0), 4), bit.rshift(bit.band(rgb, 0xF00), 8) }
+end
+
 function rgb_addon.initialize()
 	if (pack.is_installed(addon_id)) then
 		for i=0, 4095 do
@@ -63,35 +73,36 @@ function rgb_addon.fetch_textures_color(colors)
 	local i = 1
 	for k, v in pairs(textures) do
 		textures[k] = {
-			colors[i], colors[i+1], colors[i+2], colors[i+3]
+			colors[i], colors[i+1], colors[i+2]
 		}
-		i = i + 4
+		i = i + 3
 	end
 	for id, block_textures in pairs(blocks) do
-		local avarage_color = { 0, 0, 0, 0 }
+		local avarage_color = { 0, 0, 0 }
 		for _, block_texture in pairs(block_textures) do
-			for i=1,4 do
-				avarage_color[i] = avarage_color[i] + textures[block_texture][i]
-			end
+			avarage_color = vec3.add(avarage_color, textures[block_texture])
 		end
-		avarage_color = vec4.div(avarage_color, #block_textures)
-		local final_color = math.floor(avarage_color[1] / 16)
-		final_color = bit.bor(final_color, bit.lshift(math.floor(avarage_color[2] / 16), 4))
-		final_color = bit.bor(final_color, bit.lshift(math.floor(avarage_color[3] / 16), 8))
-		rgb_addon.blocks_indices[final_color] = id
+		avarage_color = vec3.div(avarage_color, #block_textures)
+		rgb_addon.blocks_indices[pack_color(avarage_color)] = id
 	end
+	local palette = table.copy(rgb_addon.blocks_indices)
 	for i=0,4095 do
 		if (rgb_addon.blocks_indices[i] == nil) then
-			local closest_key = 0
-			local smallest_difference = 4095
-			for k, _ in pairs(rgb_addon.blocks_indices) do
-				local difference = math.abs(k - i)
-				if (difference < smallest_difference) then
-					closest_key = k
-					smallest_difference = difference
+			local target_color = unpack_color(i)
+			local best_color_key = 0
+			local factor_min = 1000000000
+			for k, v in pairs(palette) do
+				local current_color = unpack_color(k)
+				local factor = math.pow(current_color[1] - target_color[1], 2) +
+							  math.pow(current_color[2] - target_color[2], 2) +
+							  math.pow(current_color[3] - target_color[3], 2)
+				
+				if (factor < factor_min) then 
+					factor_min = factor
+					best_color_key = k
 				end
 			end
-			rgb_addon.blocks_indices[i] = rgb_addon.blocks_indices[closest_key]
+			rgb_addon.blocks_indices[i] = rgb_addon.blocks_indices[best_color_key]
 		end
 	end
 end
