@@ -15,7 +15,7 @@ function display.initialize()
 	for i=0, 15 do
 		blocks_indices[i] = block.index("projector:black" .. tostring(i))
 	end
-	blocks_indices[-1] = block.index("core:air")
+	blocks_indices[255] = block.index("core:air")
 end
 
 local function get_rgb_block(pixels, index)
@@ -94,17 +94,13 @@ end
 
 function display.clear()
 	local pixels = {}
-	if (config.rgb_mode == true) then
-		for i=1,config.resolution[1] * config.resolution[2] * 2, 2 do
-			pixels[i] = 0
-			pixels[i + 1] = -1
-		end
-	else
+	local rgb_enabled = config.rgb_mode
+	config.rgb_mode = false
 		for i=1,config.resolution[1] * config.resolution[2] do
-			pixels[i] = -1
+		pixels[i] = 255
 		end
-	end
 	display.update(pixels)
+	config.rgb_mode = rgb_enabled
 end
 
 return display
