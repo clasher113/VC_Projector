@@ -8,8 +8,12 @@
 #include <SFML/System/Sleep.hpp>
 #include <SFML/Graphics/Image.hpp>
 
+const uint8_t PREVIOUS_BLOCK_ID = 254;
+const uint16_t PREVIOUS_BLOCK_ID_RGB = 65534;
+
 int main() {
 	SyncPacketIn syncPacket;
+	std::vector<uint8_t> previousPixels;
 
 	vcp::Window window(sf::Vector2u(syncPacket.captureSize.x, syncPacket.captureSize.y));
 	window.setFramerateLimit(syncPacket.framerate);
@@ -67,9 +71,10 @@ int main() {
 					currentStatus = Status::CAPTURING;
 
 					const sf::Color* const pixels = window.capture();
+					const size_t pixelsSize = syncPacket.projectionSize.x * syncPacket.projectionSize.y * (packet.rgbMode ? 2 : 1);
 
 					CapturePacketOut capturePacketOut;
-					capturePacketOut.pixels.reserve(syncPacket.projectionSize.x * syncPacket.projectionSize.y * (packet.rgbMode ? 2 : 1));
+					capturePacketOut.pixels.reserve(pixelsSize);
 
 					const float scale_x = static_cast<float>(syncPacket.captureSize.x) / syncPacket.projectionSize.x;
 					const float scale_y = static_cast<float>(syncPacket.captureSize.y) / syncPacket.projectionSize.y;
@@ -96,6 +101,23 @@ int main() {
 							}
 						}
 					}
+
+					if (previousPixels.size() == pixelsSize) {
+						for (size_t i = 0; i < pixelsSize; i += (packet.rgbMode ? 2 : 1)) {
+							if (packet.rgbMode) {
+								const uint16_t currentPixel = static_cast<uint16_t>(capturePacketOut.pixels[i]);
+								if (static_cast<uint16_t>(previousPixels[i]) == currentPixel)
+									reinterpret_cast<uint16_t&>(capturePacketOut.pixels[i]) = PREVIOUS_BLOCK_ID_RGB;
+								reinterpret_cast<uint16_t&>(previousPixels[i]) = currentPixel;
+							}
+							else {
+								const uint8_t currentPixel = capturePacketOut.pixels[i];
+								if (previousPixels[i] == currentPixel) capturePacketOut.pixels[i] = PREVIOUS_BLOCK_ID;
+								previousPixels[i] = currentPixel;
+							}
+						}
+					}
+					else previousPixels.resize(pixelsSize);
 
 					network.pushPacket(capturePacketOut);
 					currentStatus = Status::CAPTURING;
@@ -136,6 +158,9 @@ int main() {
 		}
 		if (lastStatus != currentStatus){
 			lastStatus = currentStatus;
+			if (currentStatus != Status::CAPTURING){
+				previousPixels.clear();
+			}
 			window.setStatus(currentStatus);
 		}
 		network.push();
