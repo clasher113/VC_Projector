@@ -65,7 +65,7 @@ end
 local function cleanup_socket()
     wait_for_respond = false
     while (true) do
-        local temp = client:recv(1024, false)
+        local temp = client:recv(1024, config.use_bytearray)
         if (temp == nil or #temp == 0) then
             return
         end
@@ -73,7 +73,7 @@ local function cleanup_socket()
 end
 
 local function receive()
-    local data = client:recv(4, false)
+    local data = client:recv(4, config.use_bytearray)
     if (data == nil or #data == 0) then
         return nil
     end
@@ -83,7 +83,7 @@ local function receive()
         cleanup_socket()
         return nil
     end
-    data = client:recv(4, false)
+    data = client:recv(4, config.use_bytearray)
     if (data == nil or #data ~= 4) then
         debug.log("[WARNING]: Invalid message format");
         cleanup_socket()
@@ -98,13 +98,11 @@ local function receive()
 
     local out_data = data_buffer(nil, util.BYTE_ORDER, config.use_bytearray)
     while (message_size > 0) do
-        local sub_buffer = client:recv(message_size, false)
+        local sub_buffer = client:recv(message_size, config.use_bytearray)
         if (sub_buffer == nil) then
             return nil
         elseif (#sub_buffer == 0) then
             debug.log("[WARNING]: Read buffer empty")
-            cleanup_socket()
-            return nil
         end
 
         message_size = message_size - #sub_buffer

@@ -29,6 +29,7 @@ function rgb_addon.initialize()
 		is_loaded = true
 	end
 	rgb_addon.blocks_indices[65535] = block.index("core:air")
+	rgb_addon.blocks_indices[65534] = -1
 end
 
 function rgb_addon.get_textures_data()
