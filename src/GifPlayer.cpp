@@ -4,6 +4,12 @@
 
 #include <SFML/Graphics/Image.hpp>
 #include <iostream>
+#ifdef _WIN32
+#define NOMINMAX
+#define LEAN_AND_MEAN
+#include <Windows.h>
+#include <fcntl.h>
+#endif // _WIN32
 
 const size_t KEY_FRAMES_INTERVAL = 40; // frames
 
@@ -16,7 +22,18 @@ GifPlayer::~GifPlayer() {
 bool GifPlayer::openFile(const std::filesystem::path& filePath) {
     close();
     int error = D_GIF_SUCCEEDED;
+#ifdef _WIN32
+	const int len = MultiByteToWideChar(CP_UTF8, 0, filePath.string().c_str(), (int)filePath.string().size(), nullptr, 0);
+	std::wstring wFilePath(len, '\0');
+	MultiByteToWideChar(CP_UTF8, 0, filePath.string().c_str(), (int)filePath.string().size(), (LPWSTR)wFilePath.data(), (int)wFilePath.size());
+	int fileHandle;
+	_wsopen_s(&fileHandle, wFilePath.c_str(), _O_RDONLY, _SH_DENYWR, _S_IREAD);
+	if (fileHandle != -1) {
+		m_p_gifFile = DGifOpenFileHandle(fileHandle, &error);
+	}
+#else
 	m_p_gifFile = DGifOpenFileName(filePath.string().c_str(), &error);
+#endif // _WIN32
     if (!m_p_gifFile) {
         std::cout << "DGifOpenFileName() failed - " << error << std::endl;
         return false;

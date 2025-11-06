@@ -45,9 +45,9 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 		window.setIconified(true);
 		std::vector<std::string> result = path.result();
 		window.setIconified(false);
-		if (path.result().empty()) return;
+		if (result.empty()) return;
 		m_p_gifPlayer->close();
-		fs::path filePath(path.result().back());
+		fs::path filePath(result.back());
 		if (filePath.extension() == ".gif") {
 			m_p_imageContainer->removeElement(m_p_playerController);
 			m_p_gifPlayer->openFile(filePath);
