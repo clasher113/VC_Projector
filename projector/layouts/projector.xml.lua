@@ -3,14 +3,23 @@ local display = require("projector:display")
 local rgb_addon = require("projector:rgb_addon")
 local synchronizer = require("projector:synchronizer")
 local util = require("projector:util")
+local highlight = require("projector:highlight")
 
-local orientations = {"Vertical", "Horizontal"}
-local axes = {"X", "Z"}
+local orientations = { 
+	[util.orientation.VERTICAL] = "Vertical",
+	[util.orientation.HORIZONTAL] = "Horizontal"
+}
+local axes = {
+	[util.axis.X] = "X", 
+	[util.axis.Z] = "Z"
+}
 
-local show_experimental_settings = true
+local show_additional_settings = true
 local logs_num = 1
 local single_time_init = false
 local gui_enabled = true
+
+local LOGS_MAX_COUNT = 20
 
 function on_gui_render()
 	for k, v in pairs(synchronizer.messages) do
@@ -21,10 +30,10 @@ function on_gui_render()
 
 	local anim_speed = 2000 -- pixels per second
 	local size = document["root"].size
-	if (show_experimental_settings == true and size[1] < 810) then
+	if (show_additional_settings == true and size[1] < 810) then
 		size[1] = math.min(810, size[1] + anim_speed * time.delta())
 	end
-	if (show_experimental_settings == false and size[1] > 540) then
+	if (show_additional_settings == false and size[1] > 540) then
 		size[1] = math.max(540, size[1] - anim_speed * time.delta())
 	end
 	document["root"].size = size
@@ -45,15 +54,28 @@ function on_open()
 		end
 		document["rgb_mode"].checked = config.rgb_mode
 		document["same_size"].checked = config.same_size
-		document["bytearray"].checked = config.use_bytearray
-		toggle_experimental_settings()
+		document["use_bytearray"].checked = config.use_bytearray
+		document["highlight_area_checkbox"].checked = config.highlight_area
+		toggle_additional_settings()
 		same_size_consumer(config.same_size)
+		stop_on_lag_consumer(config.stop_on_lag_duration)
 
 		document["settings_1"]:setInterval(1, on_gui_render)
 		synchronizer.on_disconnect_callback = function()
 			if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 				stop()
 			end
+		end
+		synchronizer.on_lag_callback = function()
+			local enabled = config.stop_on_lag_duration ~= document["stop_on_lag_trackbar"].max
+			local delta = time.delta() * 1000
+			if (enabled and delta > config.stop_on_lag_duration) then
+				stop()
+				log_message("Stopped due to lag " .. tostring(math.round(delta, 0)) .. "ms, limit " .. 
+					tostring(config.stop_on_lag_duration) .. "ms")
+				return true
+			end
+			return false
 		end
 	end
 end
@@ -69,7 +91,10 @@ end
 function log_message(string)
 	local color = (logs_num % 2 == 0 and "#ffffff10" or "#ffffff00")
 	document["logs"]:add("<textbox id='log" .. tostring(logs_num) .. "' color='" .. color .. "' editable='false' multiline='true' text-wrap='true' autoresize='true'>" .. string .. "</textbox>")
-	for i=logs_num,1,-1 do 
+	if (logs_num > LOGS_MAX_COUNT) then
+		document["log" .. tostring(logs_num - LOGS_MAX_COUNT)]:destruct()
+	end
+	for i=logs_num,math.max(1, logs_num - LOGS_MAX_COUNT),-1 do 
 		document["log" .. tostring(i)]:moveInto(document["logs"])
 	end
 	logs_num = logs_num + 1
@@ -87,6 +112,7 @@ function stop()
 		display.clear()
 	end
 	log_message("Capturing stopped")
+	highlight.refresh()
 end
 
 function start()
@@ -94,6 +120,7 @@ function start()
 	document["main_button"].text = "Stop"
 	log_message("Capturing started")
 	config.write()
+	highlight.stop()
 end
 
 function main_button_func()
@@ -122,6 +149,7 @@ function toggle_orientation()
 		config.orientation = 1
 	end
 	document["orientation"].text = "Orientation: " .. orientations[config.orientation]
+	highlight.refresh()
 end
 
 function toggle_axis()
@@ -130,6 +158,7 @@ function toggle_axis()
 		config.axis = 1
 	end
 	document["axis"].text = "Axis: " .. axes[config.axis]
+	highlight.refresh()
 end
 
 function fps_consumer(string)
@@ -182,6 +211,7 @@ end
 function projection_size_x_consumer(string)
 	if (not projection_size_x_validator(string)) then return end
 	config.resolution[1] = tonumber(string)
+	highlight.refresh()
 	if (config.same_size == true) then
 		capture_size_x_consumer(string)
 	end
@@ -200,6 +230,7 @@ end
 function projection_size_y_consumer(string)
 	if (not projection_size_y_validator(string)) then return end
 	config.resolution[2] = tonumber(string)
+	highlight.refresh()
 	if (config.same_size == true) then
 		capture_size_y_consumer(string)
 	end
@@ -248,6 +279,7 @@ end
 function projection_offset_x_consumer(string)
 	if (not projection_offset_x_validator(string)) then return end
 	config.offset[1] = tonumber(string)
+	highlight.refresh()
 end
 
 function projection_offset_x_supplier()
@@ -262,6 +294,7 @@ end
 function projection_offset_y_consumer(string)
 	if (not projection_offset_y_validator(string)) then return end
 	config.offset[2] = tonumber(string)
+	highlight.refresh()
 end
 
 function projection_offset_y_supplier()
@@ -276,6 +309,7 @@ end
 function projection_offset_z_consumer(string)
 	if (not projection_offset_z_validator(string)) then return end
 	config.offset[3] = tonumber(string)
+	highlight.refresh()
 end
 
 function projection_offset_z_supplier()
@@ -290,6 +324,7 @@ function same_size_consumer(checked)
 	if (checked) then
 		capture_size_x_consumer(document["projection_size_x"].text)
 		capture_size_y_consumer(document["projection_size_y"].text)
+		highlight.refresh()
 	end
 end
 
@@ -305,13 +340,25 @@ function framerate_supplier()
 	return "Current framerate: " .. tostring(display.current_framerate)
 end
 
-function toggle_experimental_settings()
-	show_experimental_settings = not show_experimental_settings
-	document["experimental_settings"].text = "Experimental settings " .. (show_experimental_settings and "<<" or ">>")
+function toggle_additional_settings()
+	show_additional_settings = not show_additional_settings
+	document["additional_settings"].text = "Additional settings " .. (show_additional_settings and "<<" or ">>")
 end
 
-function bytearray_consumer(checked)
+function use_bytearray_consumer(checked)
 	config.use_bytearray = checked
+end
+
+function highlight_area_consumer(checked)
+	config.highlight_area = checked
+	highlight.refresh()
+end
+
+function stop_on_lag_consumer(value)
+	local is_max_value = value == document["stop_on_lag_trackbar"].max
+	document["stop_on_lag_label"].text = "Stop on lag: " .. (is_max_value and "Disabled" or tostring(value) .. "ms")
+	document["stop_on_lag_trackbar"].value = value
+	config.stop_on_lag_duration = value
 end
 
 function clear_display()

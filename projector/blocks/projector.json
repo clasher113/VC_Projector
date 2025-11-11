@@ -1,8 +1,5 @@
 {
-  "model": "custom",
-  "model-primitives": {
-    "tetragons": [ [ 0, 0, 0, 0, 0, 0, 0, 0, 0, "black5" ] ]
-  },
+  "model": "none",
   "light-passing": true,
   "sky-light-passing": true,
   "hitbox": [ 0, 0, 0, 1, 1, 1 ],

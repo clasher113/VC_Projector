@@ -1,5 +1,6 @@
 local config = require("projector:config")
 local rgb_addon = require("projector:rgb_addon")
+local util = require("projector:util")
 
 local BLOCK_ID_PREVIOUS = -1
 
@@ -41,10 +42,6 @@ function display.update(pixels)
 	local step = (config.rgb_mode == true and 2 or 1)
 	local start_pos = vec3.add(display.position, config.offset)
 	local end_pos = { start_pos[1] + config.resolution[1] - 1, start_pos[2] + config.resolution[2] - 1,  start_pos[3] + config.resolution[1] - 1 }
-
-	--local fragment = generation.create_fragment(start_pos, vec3.add(start_pos, {160, 90, 1}), false)
-	--fragment:place(vec3.add(start_pos, {0, 0, 20}), 0)
-
 	local i = 1
 
 	local get_block_func
@@ -54,9 +51,9 @@ function display.update(pixels)
 		get_block_func = get_mohochrome_block
 	end
 
-	if (config.orientation == 1) then -- vertical
+	if (config.orientation == util.orientation.VERTICAL) then
 	
-		if (config.axis == 1) then	-- x-axis
+		if (config.axis == util.axis.X) then
 			for x=start_pos[1], end_pos[1], 1 do
 				for y=start_pos[2], end_pos[2], 1 do 
 					local block_id = get_block_func(pixels, i)
@@ -66,7 +63,7 @@ function display.update(pixels)
 					i = i + step
 				end
 			end
-		elseif (config.axis == 2) then -- z-axis
+		elseif (config.axis == util.axis.Z) then
 			for z=start_pos[3], end_pos[3], 1 do 
 				for y=start_pos[2], end_pos[2], 1 do 
 					local block_id = get_block_func(pixels, i)
@@ -78,9 +75,9 @@ function display.update(pixels)
 			end
 		end
 	
-	elseif (config.orientation == 2) then -- horizontal
+	elseif (config.orientation == util.orientation.HORIZONTAL) then
 	
-		if (config.axis == 1) then	-- x-axis
+		if (config.axis == util.axis.X) then
 			end_pos[3] = start_pos[3] + config.resolution[2] - 1
 			for x=start_pos[1], end_pos[1], 1 do 
 				for z=end_pos[3], start_pos[3], -1 do
@@ -91,7 +88,7 @@ function display.update(pixels)
 					i = i + step
 				end
 			end
-		elseif (config.axis == 2) then -- z-axis
+		elseif (config.axis == util.axis.Z) then
 			end_pos[1] = start_pos[1] + config.resolution[2] - 1
 			for z=start_pos[3], end_pos[3], 1 do 
 				for x=start_pos[1], end_pos[1], 1 do

@@ -24,11 +24,23 @@ local packet_bitmask = {
 	INIT = 0x8
 }
 
+local orientation = {
+	VERTICAL = 1,
+	HORIZONTAL = 2
+}
+
+local axis = {
+	X = 1,
+	Z = 2
+}
+
 local BYTE_ORDER = "LE"
 
 return {
 	synchronizer_status = synchronizer_status,
 	status_info = status_info,
 	packet_bitmask = packet_bitmask,
+	orientation = orientation,
+	axis = axis,
 	BYTE_ORDER = BYTE_ORDER
 }

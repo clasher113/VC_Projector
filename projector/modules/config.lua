@@ -5,10 +5,12 @@ local config = {
 	refresh_rate = 30,
 	orientation = 1,
 	axis = 1,
+	stop_on_lag_duration = 150,
 	same_size = true,
 	rgb_mode = false,
 	clear_on_stop = true,
-	use_bytearray = true
+	use_bytearray = true,
+	highlight_area = true
 }
 
 local config_file = pack.shared_file("projector", "config")
@@ -21,10 +23,12 @@ function config.read()
 	local rewrite = false
 	local temp = bjson.frombytes(file.read_bytes(config_file))
 	for k, v in pairs(config) do
-		if (temp[k] ~= nil and type(v) ~= "function" and type(v) == type(temp[k])) then
-			config[k] = temp[k]
-		else
-			rewrite = true
+		if (type(v) ~= "function") then
+			if (temp[k] ~= nil and type(v) == type(temp[k]) and not (type(v) == "table" and #v ~= #temp[k])) then
+				config[k] = temp[k]
+			else
+				rewrite = true
+			end
 		end
 	end
     if rewrite then

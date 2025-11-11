@@ -18,30 +18,27 @@ function on_update(tps)
 	local dst_pos = vec3.add(display.position, config.offset)
 	local size = {0, 0, 0}
 
-	if (config.orientation == 1) then
-		if (config.axis == 1) then
-			size = {config.capture_size[1], config.capture_size[2], 1.0}
-		elseif (config.axis == 2) then
-			size = {1.0, config.capture_size[2], config.capture_size[1]}
+	if (config.orientation == util.orientation.VERTICAL) then
+		if (config.axis == util.axis.X) then
+			size = { config.resolution[1], config.resolution[2], 1.0 }
+		elseif (config.axis == util.axis.Z) then
+			size = { 1.0, config.resolution[2], config.resolution[1] }
 		end
-	elseif (config.orientation == 2) then
-		if (config.axis == 1) then
-			size = {config.capture_size[1], 1.0, config.capture_size[2]}
-		elseif (config.axis == 2) then
-			size = {config.capture_size[2], 1.0, config.capture_size[1]}
+	elseif (config.orientation == util.orientation.HORIZONTAL) then
+		if (config.axis == util.axis.X) then
+			size = { config.resolution[1], 1.0, config.resolution[2] }
+		elseif (config.axis == util.axis.Z) then
+			size = { config.resolution[2], 1.0, config.resolution[1] }
 		end
 	end
 	dst_pos = vec3.add(dst_pos, vec3.div(size, 2))
-
 	local entity_pos = transform:get_pos()
-	local direction = vec3.div(vec3.sub(dst_pos, entity_pos), math.sqrt(vec3.length(vec3.sub(dst_pos, entity_pos))))
-	local rotation_x = math.atan2(-direction[1], -direction[3]) * 180.0 / math.pi
-	local rotation_y = math.atan(direction[2]) * 180.0 / math.pi
 
-	local matrix = mat4.rotate({0, 1, 0}, rotation_x)
-	matrix = mat4.rotate(matrix, {1, 0, 0}, rotation_y)
-
+	local matrix = mat4.look_at(entity_pos, dst_pos, { 0, 1, 0 })
+	matrix = mat4.translate(matrix, entity_pos)
+	matrix = mat4.transpose(matrix)
 	skeleton:set_matrix(projector_bone_index, matrix)
+
 	if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 		matrix = mat4.rotate({1, 0, 0}, time.uptime() % 360 * 50)
 		skeleton:set_matrix(disk_1_bone_index, matrix)

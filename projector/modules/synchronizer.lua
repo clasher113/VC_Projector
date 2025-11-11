@@ -7,7 +7,8 @@ local util = require("projector:util")
 
 local synchronizer = {
     messages = {},
-    on_disconnect_callback = nil
+    on_disconnect_callback = nil,
+    on_lag_callback = nil
 }
 
 local PROTOCOL_MAGIC = 0xAAFFFAA
@@ -172,6 +173,11 @@ function synchronizer.server_routine()
             if (capture_success == false) then
                 table.insert(synchronizer.messages, "Capture error")
             elseif (status == util.synchronizer_status.CAPTURING) then
+                 if (synchronizer.on_lag_callback ~= nil) then
+                    if (synchronizer.on_lag_callback()) then
+                        return
+                    end
+                end
                 local pixelsSize = buffer:get_uint32()
                 local pixels = buffer:get_bytes(pixelsSize)
                 display.update(pixels)
@@ -180,11 +186,11 @@ function synchronizer.server_routine()
         if (bit.band(bit_mask, util.packet_bitmask.INIT) > 0) then
             local init_success = buffer:get_bool()
             if (init_success) then
-                display.rgb_initialized = true
-                table.insert(synchronizer.messages, "Initialization success")
                 local colors_size = buffer:get_uint32()
                 local colors = buffer:get_bytes(colors_size)
                 rgb_addon.fetch_textures_color(colors)
+                display.rgb_initialized = true
+                table.insert(synchronizer.messages, "Initialization success")
             else
                 table.insert(synchronizer.messages, "Initialization error")
                 config.rgb_mode = false

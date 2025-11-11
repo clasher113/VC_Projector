@@ -29,13 +29,15 @@
         <button id="orientation" pos="10,110" size="230,30" onclick="toggle_orientation()"/>
 		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">Use RGB mode</checkbox>
 	</container>
-	<container pos="550,30" color="#00000099" scrollable="0" size="250, 580">
-		<checkbox id="bytearray" pos="10, 10" size="250, 30" consumer="bytearray_consumer">Use ByteArray</checkbox>
-		<checkbox enabled="false" pos="10, 40" size="250, 30">Use fragment:place() instead of block.set()</checkbox>
-	</container>
+	<panel pos="550,30" padding="10, 10, 10, 10" min-length="580" color="#00000099" scrollable="0" size="230, 580">
+		<checkbox id="use_bytearray" consumer="use_bytearray_consumer">Use ByteArray</checkbox>
+		<checkbox id ="highlight_area_checkbox" consumer="highlight_area_consumer">Highlight area</checkbox>
+		<label id="stop_on_lag_label"></label>
+		<trackbar id="stop_on_lag_trackbar" min="50" max="510" step="10" consumer="stop_on_lag_consumer"></trackbar>
+	</panel>
     <label pos="10,280" supplier="status_supplier"/>    
 	<label pos="10, 300" supplier="framerate_supplier"/>
-	<button id="experimental_settings" pos="330, 280" size="200, 30" onclick="toggle_experimental_settings()"/>
+	<button id="additional_settings" pos="330, 280" size="200, 30" onclick="toggle_additional_settings()"/>
     <button id="sync" pos="10,320" size="520,30" onclick="synchronize()">Synchronize</button>
     <button id="main_button" pos="10,360" size="520,30" onclick="main_button_func()">Start</button>
     <button id="clear" pos="10,400" size="520,30" onclick="clear_display()">Clear area</button>

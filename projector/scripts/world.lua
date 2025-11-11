@@ -3,6 +3,7 @@ local rgb_addon = require("projector:rgb_addon")
 local synchronizer = require("projector:synchronizer")
 local display = require("projector:display")
 local instance_limit = require("projector:instance_limit")
+local highlight = require("projector:highlight")
 
 function on_world_open()
 	config.read()
@@ -10,6 +11,10 @@ function on_world_open()
 	display.initialize()
 	instance_limit.load()
 	synchronizer.start_server()
+end
+
+function on_world_tick()
+	highlight.update()
 end
 
 function on_world_save()
