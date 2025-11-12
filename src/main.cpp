@@ -105,8 +105,8 @@ int main() {
 					if (previousPixels.size() == pixelsSize) {
 						for (size_t i = 0; i < pixelsSize; i += (packet.rgbMode ? 2 : 1)) {
 							if (packet.rgbMode) {
-								const uint16_t currentPixel = static_cast<uint16_t>(capturePacketOut.pixels[i]);
-								if (static_cast<uint16_t>(previousPixels[i]) == currentPixel)
+								const uint16_t currentPixel = reinterpret_cast<uint16_t&>(capturePacketOut.pixels[i]);
+								if (reinterpret_cast<uint16_t&>(previousPixels[i]) == currentPixel)
 									reinterpret_cast<uint16_t&>(capturePacketOut.pixels[i]) = PREVIOUS_BLOCK_ID_RGB;
 								reinterpret_cast<uint16_t&>(previousPixels[i]) = currentPixel;
 							}
