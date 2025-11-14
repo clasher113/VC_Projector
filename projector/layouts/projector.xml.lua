@@ -55,6 +55,7 @@ function on_open()
 		document["rgb_mode"].checked = config.rgb_mode
 		document["same_size"].checked = config.same_size
 		document["use_bytearray"].checked = config.use_bytearray
+		document["use_chunks"].checked = config.use_chunks
 		document["highlight_area_checkbox"].checked = config.highlight_area
 		toggle_additional_settings()
 		same_size_consumer(config.same_size)
@@ -347,6 +348,10 @@ end
 
 function use_bytearray_consumer(checked)
 	config.use_bytearray = checked
+end
+
+function use_chunks_consumer(checked)
+	config.use_chunks = checked
 end
 
 function highlight_area_consumer(checked)

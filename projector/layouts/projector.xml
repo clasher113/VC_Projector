@@ -30,10 +30,12 @@
 		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">Use RGB mode</checkbox>
 	</container>
 	<panel pos="550,30" padding="10, 10, 10, 10" min-length="580" color="#00000099" scrollable="0" size="230, 580">
-		<checkbox id="use_bytearray" consumer="use_bytearray_consumer">Use ByteArray</checkbox>
 		<checkbox id ="highlight_area_checkbox" consumer="highlight_area_consumer">Highlight area</checkbox>
 		<label id="stop_on_lag_label"></label>
 		<trackbar id="stop_on_lag_trackbar" min="50" max="510" step="10" consumer="stop_on_lag_consumer"></trackbar>
+		<label margin="0, 10, 0, 0">Experimental settings:</label>
+	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="Use ByteArray instead of table in network functions">Use ByteArray</checkbox>
+	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="Use chunkwise update method">Chunkwise update method</checkbox>
 	</panel>
     <label pos="10,280" supplier="status_supplier"/>    
 	<label pos="10, 300" supplier="framerate_supplier"/>

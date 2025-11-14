@@ -34,6 +34,11 @@ local axis = {
 	Z = 2
 }
 
+local update_method = {
+	PIXELS = 0,
+	CHUNKS = 1
+}
+
 local BYTE_ORDER = "LE"
 
 return {
@@ -42,5 +47,6 @@ return {
 	packet_bitmask = packet_bitmask,
 	orientation = orientation,
 	axis = axis,
+	update_method = update_method,
 	BYTE_ORDER = BYTE_ORDER
 }

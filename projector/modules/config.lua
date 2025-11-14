@@ -10,7 +10,8 @@ local config = {
 	rgb_mode = false,
 	clear_on_stop = true,
 	use_bytearray = true,
-	highlight_area = true
+	highlight_area = true,
+	use_chunks = true
 }
 
 local config_file = pack.shared_file("projector", "config")

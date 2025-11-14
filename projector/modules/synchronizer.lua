@@ -176,9 +176,16 @@ function synchronizer.server_routine()
                         return
                     end
                 end
-                local pixelsSize = buffer:get_uint32()
-                local pixels = buffer:get_bytes(pixelsSize)
-                display.update(pixels)
+                local update_method = buffer:get_uint16()
+                if (update_method == util.update_method.PIXELS) then
+                    local pixels_size = buffer:get_uint32()
+                    local pixels = buffer:get_bytes(pixels_size)
+                    display.update_with_pixels(pixels)
+                elseif (update_method == util.update_method.CHUNKS) then
+                    local chunksSize = buffer:get_uint32()
+                    local chunks = buffer:get_bytes(chunksSize)
+                    display.update_with_chunks(chunks)
+                end
             end
         end
         if (bit.band(bit_mask, util.packet_bitmask.INIT) > 0) then
@@ -214,6 +221,7 @@ function synchronizer.server_routine()
             bit_mask = bit.bor(bit_mask, util.packet_bitmask.CAPTURE)
             out_buffer:put_bool(true)
             out_buffer:put_bool(config.rgb_mode)
+            out_buffer:put_uint16(config.use_chunks and util.update_method.CHUNKS or util.update_method.PIXELS)
         elseif (status == util.synchronizer_status.INIT) then
             bit_mask = bit.bor(bit_mask, util.packet_bitmask.INIT)
             local texture_data = rgb_addon.get_textures_data()
