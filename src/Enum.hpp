@@ -25,6 +25,11 @@ enum class Mode {
 	IMAGE
 };
 
+enum UpdateMethod : uint16_t {
+	PIXELS = 0,
+	CHUNKS
+};
+
 template<typename T>
 T incrementEnumClass(T& enumClass, uint64_t factor, T max, T fallback){
 	enumClass = static_cast<T>(static_cast<int>(enumClass) + factor);

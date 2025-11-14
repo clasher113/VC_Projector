@@ -193,9 +193,26 @@ std::vector<uint8_t> Network::assemble() {
 				bitMask |= BitMask::CAPTURE;
 				packData(data, REFNSIZE(packet.captureStatus));
 				if (packet.captureStatus) {
-					const uint32_t size = static_cast<uint32_t>(packet.pixels.size());
-					packData(data, REFNSIZE(size));
-					packData(data, packet.pixels.data(), size);
+					packData(data, REFNSIZE(packet.updateMethod));
+					if (packet.updateMethod == UpdateMethod::PIXELS) {
+						const uint32_t size = static_cast<uint32_t>(packet.pixels.size());
+						packData(data, REFNSIZE(size));
+						packData(data, packet.pixels.data(), size);
+					}
+					else if (packet.updateMethod == UpdateMethod::CHUNKS) {
+						uint32_t totalSize = packet.chunks.size();
+						for (const auto& chunk : packet.chunks) {
+							totalSize += chunk.data.size();
+						}
+						packData(data, REFNSIZE(totalSize));
+						for (const auto& chunk : packet.chunks) {
+							const uint8_t hasData = !chunk.data.empty();
+							packData(data, REFNSIZE(hasData));
+							if (!hasData) continue;
+							const uint32_t size = static_cast<uint32_t>(chunk.data.size());
+							packData(data, chunk.data.data(), size);
+						}
+					}
 				}
 			}
 			else if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, InitPacketOut>) {

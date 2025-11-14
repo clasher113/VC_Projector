@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Util.hpp"
+#include "../Enum.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -28,14 +29,23 @@ static_assert(alignof(SyncPacketOut) == 1 && sizeof(SyncPacketOut) == 1);
 struct CapturePacketIn {
     uint8_t capture = 0;
     uint8_t rgbMode = 0;
+    UpdateMethod updateMethod = UpdateMethod::PIXELS;
 };
-static_assert(alignof(CapturePacketIn) == 1 && sizeof(CapturePacketIn) == 2);
+static_assert(alignof(CapturePacketIn) == 1 && sizeof(CapturePacketIn) == 4);
 
 #pragma pack(pop)
 
 struct CapturePacketOut {
+    struct Chunk {
+        Chunk(const sf::Vector2u& size, bool rgb) {
+            data.resize(size.x * size.y * (rgb ? 2 : 1));
+        }
+        std::vector<uint8_t> data;
+    };
     uint8_t captureStatus = 1;
+    UpdateMethod updateMethod = UpdateMethod::PIXELS;
     std::vector<uint8_t> pixels;
+    std::vector<Chunk> chunks;
 };
 
 struct InitPacketIn {
