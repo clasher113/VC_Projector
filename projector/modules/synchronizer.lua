@@ -129,9 +129,7 @@ function synchronizer.server_routine()
         status = STATUS_FALLBACK
     end
 
-    if (client == nil) then
-        return
-    elseif (client:is_connected() == false) then
+    if (status ~= util.synchronizer_status.NOT_CONNECTED and (client == nil or not client:is_connected())) then
         debug.log("client disconnect")
         if (synchronizer.on_disconnect_callback ~= nil) then
             synchronizer.on_disconnect_callback()
@@ -139,8 +137,8 @@ function synchronizer.server_routine()
         status = util.synchronizer_status.NOT_CONNECTED
         wait_for_respond = false
         client = nil
-        return
     end
+    if (client == nil) then return end
 
     while(true) do
         local buffer = receive()
