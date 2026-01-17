@@ -76,9 +76,9 @@ function display.update_with_pixels(pixels)
 		end
 	
 	elseif (config.orientation == util.orientation.HORIZONTAL) then
-		local end_pos = { start_pos[1] + config.resolution[2] - 1, start_pos[3] + config.resolution[2] - 1 }
-
+		
 		if (config.axis == util.axis.X) then
+			local end_pos = { start_pos[1] + config.resolution[1] - 1, start_pos[3] + config.resolution[2] - 1 }
 			for x = start_pos[1], end_pos[1] do 
 				for z = end_pos[2], start_pos[3], -1 do
 					local block_id = get_block_func(pixels, i)
@@ -89,6 +89,7 @@ function display.update_with_pixels(pixels)
 				end
 			end
 		elseif (config.axis == util.axis.Z) then
+			local end_pos = { start_pos[1] + config.resolution[2] - 1, start_pos[3] + config.resolution[1] - 1 }
 			for z = start_pos[3], end_pos[2] do 
 				for x = start_pos[1], end_pos[1] do
 					local block_id = get_block_func(pixels, i)
@@ -193,11 +194,12 @@ function display.clear()
 	local pixels = {}
 	local rgb_enabled = config.rgb_mode
 	config.rgb_mode = false
-		for i=1,config.resolution[1] * config.resolution[2] do
+	for i=1,config.resolution[1] * config.resolution[2] do
 		pixels[i] = 255
-		end
+	end
 	display.update_with_pixels(pixels)
 	config.rgb_mode = rgb_enabled
+	framerate = 0
 end
 
 return display
