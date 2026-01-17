@@ -94,8 +94,8 @@ int main() {
 
 								if (packet.rgbMode) {
 									if (transparent) {
-										capturePacketOut.pixels.emplace_back(255);
-										capturePacketOut.pixels.emplace_back(255);
+										capturePacketOut.pixels.emplace_back(TRANSPARENT_BLOCK_ID);
+										capturePacketOut.pixels.emplace_back(TRANSPARENT_BLOCK_ID);
 									}
 									else {
 										capturePacketOut.pixels.emplace_back(pixel.b / 16 | pixel.g / 16 << 4);
@@ -103,7 +103,7 @@ int main() {
 									}
 								}
 								else {
-									if (transparent) capturePacketOut.pixels.emplace_back(255);
+									if (transparent) capturePacketOut.pixels.emplace_back(TRANSPARENT_BLOCK_ID);
 									else capturePacketOut.pixels.emplace_back(static_cast<uint8_t>((0.2126 * (pixel.b / 255.f) + 0.7152 * (pixel.g / 255.f) + 0.0722 * (pixel.r / 255.f)) * 15));
 								}
 							}
@@ -130,6 +130,7 @@ int main() {
 							std::ceil(static_cast<float>(syncPacket.projectionSize.x) / CHUNK_SIZE.x),
 							std::ceil(static_cast<float>(syncPacket.projectionSize.y) / CHUNK_SIZE.y)
 						);
+						size_t pixelsOffset = 0;
 
 						for (size_t cx = 0; cx < chunksCount.x; cx++) {
 							for (size_t cy = 0; cy < chunksCount.y; cy++) {
@@ -166,7 +167,6 @@ int main() {
 									}
 								}
 								if (previousPixels.size() == pixelsSize) {
-									size_t pixelsOffset = 0;
 
 									bool hasChanges = false;
 									for (size_t i = 0; i < chunk.data.size(); i += (packet.rgbMode ? 2 : 1)) {

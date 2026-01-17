@@ -200,7 +200,7 @@ std::vector<uint8_t> Network::assemble() {
 						packData(data, packet.pixels.data(), size);
 					}
 					else if (packet.updateMethod == UpdateMethod::CHUNKS) {
-						uint32_t totalSize = packet.chunks.size();
+						uint32_t totalSize = static_cast<uint32_t>(packet.chunks.size());
 						for (const auto& chunk : packet.chunks) {
 							totalSize += chunk.data.size();
 						}
