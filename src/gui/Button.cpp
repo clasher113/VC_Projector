@@ -56,7 +56,7 @@ void Button::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector
 			m_currentState = State::IDLE;
 		}
 	}
-	else if (const auto mouseLeft = event.getIf<sf::Event::MouseLeft>()){
+	else if (event.getIf<sf::Event::MouseLeft>()){
 		m_currentState = State::IDLE;
 	}
 	if (m_currentState != m_lastState) {

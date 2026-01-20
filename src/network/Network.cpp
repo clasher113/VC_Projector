@@ -11,9 +11,9 @@
 #endif // _DEBUG
 
 const sf::IpAddress REMOTE_ADDRESS(127, 0, 0, 1);
-const unsigned short REMOTE_PORT = 6969;
-const uint32_t PROTOCOL_MAGIC = 0xAAFFFAA;
-const float RECONNECT_INTERVAL = 1.f; // seconds
+constexpr unsigned short REMOTE_PORT = 6969;
+constexpr uint32_t PROTOCOL_MAGIC = 0xAAFFFAA;
+constexpr float RECONNECT_INTERVAL = 1.f; // seconds
 constexpr uint32_t RECEIVE_MAX_SIZE = 1024 * 1024; // bytes
 
 Network::Network() {

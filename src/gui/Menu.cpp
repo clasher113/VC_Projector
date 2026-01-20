@@ -12,16 +12,12 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/Image.hpp>
+#include <SFML/OpenGL.hpp>
 
 #include <filesystem>
 #include <cstring>
 
 namespace fs = std::filesystem;
-
-struct Image {
-	float m_frameDuration;
-	sf::Texture* m_p_texture;
-};
 
 gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& canvasSize, float width) :
 	m_p_texture(new sf::Texture),
@@ -131,8 +127,8 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 }
 
 gui::Menu::~Menu() {
-	if (m_p_contentPixels) delete[] m_p_contentPixels;
 	delete m_p_gifPlayer;
+	delete m_p_texture;
 	delete m_p_sprite;
 	delete m_p_canvas;
 	delete m_p_canvasSprite;
@@ -164,8 +160,6 @@ void gui::Menu::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vec
 void gui::Menu::onSizeChange(const sf::Vector2u& newSize) {
 	if (!m_p_canvas->resize(sf::Vector2u(newSize.x, newSize.y))) return;
 	m_p_canvasSprite->setTexture(m_p_canvas->getTexture(), true);
-	if (m_p_contentPixels) delete[] m_p_contentPixels;
-	m_p_contentPixels = new sf::Color[newSize.x * newSize.y];
 	updateContent();
 }
 
@@ -177,8 +171,9 @@ const sf::Drawable& gui::Menu::getContent() const {
 	return *m_p_canvasSprite;
 }
 
-const sf::Color* gui::Menu::getContentPixels() const {
-	return m_p_contentPixels;
+void gui::Menu::getContentPixels(sf::Color* const dest) const {
+	glBindTexture(GL_TEXTURE_2D, m_p_canvas->getTexture().getNativeHandle());
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, dest);
 }
 
 Mode gui::Menu::getMode() const {
@@ -214,12 +209,4 @@ void gui::Menu::updateContent() {
 	m_p_canvas->clear(m_allowAlpha ? sf::Color::Transparent : sf::Color::Black);
 	m_p_canvas->draw(*m_p_sprite);
 	m_p_canvas->display();
-
-	sf::Image image = m_p_canvas->getTexture().copyToImage();
-	image.flipVertically();
-	memcpy(m_p_contentPixels, image.getPixelsPtr(), image.getSize().x * image.getSize().y * 4);
-
-	for (size_t i = 0; i < image.getSize().x * image.getSize().y; i++) {
-		std::swap(m_p_contentPixels[i].r, m_p_contentPixels[i].b);
-	}
 }

@@ -4,6 +4,7 @@
 
 #include <SFML/Graphics/Image.hpp>
 #include <iostream>
+#include <cstring>
 #ifdef _WIN32
 #define NOMINMAX
 #define LEAN_AND_MEAN
@@ -11,7 +12,7 @@
 #include <fcntl.h>
 #endif // _WIN32
 
-const size_t KEY_FRAMES_INTERVAL = 40; // frames
+constexpr size_t KEY_FRAMES_INTERVAL = 40; // frames
 
 GifPlayer::GifPlayer() {}
 

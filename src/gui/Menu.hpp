@@ -38,13 +38,11 @@ public:
     void setOnModeChangeCallback(const std::function<void()>& callback);
 
     const sf::Drawable& getContent() const;
-    const sf::Color* getContentPixels() const;
+    void getContentPixels(sf::Color* const dest) const;
     Mode getMode() const;
     sf::Vector2f getSize() const override;
 
     bool isCursorOverElement(const sf::Vector2f& cursorPos);
-
-    sf::Image* m_p_currentImage = nullptr;
 
 private:
     bool m_stretchToScreen = true, m_allowAlpha = false, m_justOpened = false;
@@ -61,8 +59,6 @@ private:
 
     sf::RenderTexture* m_p_canvas;
     sf::Sprite* m_p_canvasSprite;
-
-    sf::Color* m_p_contentPixels = nullptr;
 
     std::function<void()> m_onModeChangeCallback;
 

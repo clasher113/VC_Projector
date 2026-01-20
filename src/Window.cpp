@@ -15,7 +15,7 @@
 #include <X11/extensions/shape.h>
 #endif // _WIN32
 
-const float BORDER_THICKNESS = 3.f;
+constexpr float BORDER_THICKNESS = 3.f;
 const sf::Vector2u statusContainerSize(230, 30);
 
 vcp::Window::Window(const sf::Vector2u& captureSize) :
@@ -267,7 +267,7 @@ const sf::Color* const vcp::Window::capture() {
 		}
 #endif // _WIN32
 	} else if (m_p_menu->getMode() == Mode::IMAGE) {
-		memcpy(m_p_pixels, m_p_menu->getContentPixels(), m_captureSize.x * m_captureSize.y * 4);
+		m_p_menu->getContentPixels(m_p_pixels);
 	}
 	return m_p_pixels;
 }

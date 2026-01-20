@@ -5,15 +5,16 @@
 
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 #include <SFML/System/Sleep.hpp>
 #include <SFML/Graphics/Image.hpp>
 
-const uint8_t PREVIOUS_BLOCK_ID = 254;
-const uint8_t BLOCK_UPDATE_REQUIRE_ID = 253;
-const uint16_t PREVIOUS_BLOCK_ID_RGB = 65534;
-const uint8_t BLOCK_UPDATE_REQUIRE_ID_RGB = 65533;
-const uint8_t TRANSPARENT_BLOCK_ID = 255;
-const sf::Vector2u CHUNK_SIZE{ 16, 16 };
+constexpr uint8_t PREVIOUS_BLOCK_ID = 254;
+constexpr uint8_t BLOCK_UPDATE_REQUIRE_ID = 253;
+constexpr uint16_t PREVIOUS_BLOCK_ID_RGB = 65534;
+constexpr uint16_t BLOCK_UPDATE_REQUIRE_ID_RGB = 65533;
+constexpr uint8_t TRANSPARENT_BLOCK_ID = 255;
+constexpr sf::Vector2u CHUNK_SIZE{ 16, 16 };
 
 int main() {
 	SyncPacketIn syncPacket;
