@@ -74,13 +74,15 @@ bool GifPlayer::openFile(const std::filesystem::path& filePath) {
 		}
 	}
 	m_currentFrame = 0;
+	nextFrame();
 
     return true;
 }
 
-const uint8_t* const GifPlayer::nextFrame() {
-	if (m_lastFrame == m_currentFrame) return m_p_pixels;
+void GifPlayer::nextFrame() {
+	if (m_lastFrame == m_currentFrame) return;
 	m_lastFrame = m_currentFrame;
+
 	const auto it = m_keyFrames.find(m_currentFrame);
 	if (it != m_keyFrames.end()) {
 		memcpy(m_p_pixels, it->second.getPixelsPtr(), m_p_gifFile->SWidth * m_p_gifFile->SHeight * 4);
@@ -148,24 +150,22 @@ const uint8_t* const GifPlayer::nextFrame() {
 	}
 	if (m_currentFrame >= m_p_gifFile->ImageCount) m_currentFrame = 0;
 	if (m_p_controller) m_p_controller->onNewFrame(m_currentFrame);
-
-    return m_p_pixels;
+	m_hasNewFrame = true;
 }
 
 void GifPlayer::update(float delta) {
 	m_animationTimer += delta;
-	const size_t lastFrame = m_lastFrame;
 	while (m_animationTimer > getCurrentFrameDuration()) {
 		m_animationTimer -= getCurrentFrameDuration();
 		m_currentFrame++;
 		if (m_currentFrame >= m_p_gifFile->ImageCount) m_currentFrame = 0;
 		nextFrame();
 	}
-	m_lastFrame = lastFrame;
 }
 
 void GifPlayer::setFrameNum(size_t frame) {
 	if (!m_p_gifFile) return;
+	if (m_currentFrame == frame) return;
 	if (frame >= m_p_gifFile->ImageCount) frame = 0;
 	const size_t lastFrame = m_lastFrame;
 	size_t closestKeyFrame = 0;
@@ -186,6 +186,10 @@ void GifPlayer::setController(gui::PlayerController* controller) {
 	m_p_controller = controller;
 }
 
+const uint8_t* const GifPlayer::getPixels() {
+	return m_p_pixels;
+}
+
 size_t GifPlayer::getFramesCount() const {
 	return m_p_gifFile ? m_p_gifFile->ImageCount - 1 : 0;
 }
@@ -194,8 +198,12 @@ sf::Vector2u GifPlayer::getSize() const {
 	return m_p_gifFile ? sf::Vector2u(m_p_gifFile->SWidth, m_p_gifFile->SHeight) : sf::Vector2u();
 }
 
-bool GifPlayer::hasNewFrame() const {
-	return m_p_gifFile != nullptr && m_lastFrame != m_currentFrame;
+bool GifPlayer::hasNewFrame() {
+	if (m_p_gifFile != nullptr && m_hasNewFrame) {
+		m_hasNewFrame = false;
+		return true;
+	}
+	return false;
 }
 
 float GifPlayer::getCurrentFrameDuration() const {

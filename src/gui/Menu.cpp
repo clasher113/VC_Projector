@@ -55,7 +55,7 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 			if (m_p_gifPlayer->getFramesCount() > 1) m_p_imageContainer->addElement(m_p_playerController, 0);
 			if (m_p_gifPlayer->getFramesCount() < 2 || m_p_playerController->isPaused()){
 				if (m_p_gifPlayer->hasNewFrame()) {
-					m_p_texture->update(m_p_gifPlayer->nextFrame());
+					m_p_texture->update(m_p_gifPlayer->getPixels());
 					m_p_sprite->setTexture(*m_p_texture, true);
 					updateContent();
 				}
@@ -150,7 +150,7 @@ void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
 	if (m_p_gifPlayer->getFramesCount() < 2) return;
 	m_p_gifPlayer->update(m_p_playerController->isPaused() ? 0.f : deltaTime);
 	if (m_p_gifPlayer->hasNewFrame()) {
-		m_p_texture->update(m_p_gifPlayer->nextFrame());
+		m_p_texture->update(m_p_gifPlayer->getPixels());
 		m_p_sprite->setTexture(*m_p_texture, true);
 		updateContent();
 		refreshFlag = true;
