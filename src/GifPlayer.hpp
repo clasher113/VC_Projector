@@ -41,7 +41,7 @@ private:
     bool m_hasNewFrame = false;
     float m_animationTimer = 0.f;
     int m_disposal = DISPOSAL_UNSPECIFIED;
-    size_t m_currentFrame = 0, m_lastFrame = -1;
+    size_t m_currentFrame = 0;
     std::vector<FrameData> m_framesData;
     std::map<size_t, sf::Image> m_keyFrames;
     GifFileType* m_p_gifFile = nullptr;

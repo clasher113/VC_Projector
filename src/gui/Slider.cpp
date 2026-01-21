@@ -23,7 +23,6 @@ gui::Slider::~Slider() {
 }
 
 void gui::Slider::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector2f& offset) {
-    const int lastValue = m_currentValue;
     if (const auto pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (pressed->button == sf::Mouse::Button::Left && m_hover) {
             m_grabbed = true;
@@ -36,15 +35,14 @@ void gui::Slider::onEvent(const sf::Event& event, bool& refreshFlag, const sf::V
     else if (const auto moved = event.getIf<sf::Event::MouseMoved>()){
         m_hover = getTransform().transformRect(m_p_background->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset);
         if (m_grabbed) {
-            m_currentValue = getValueFromPos(std::clamp(moved->position.x - m_p_slider->getSize().x,
-                0.f, m_p_background->getSize().x - m_p_slider->getSize().x));
+            const int newValue = getValueFromPos(moved->position.x);
+            if (m_currentValue != newValue) {
+                m_currentValue = newValue;
+                m_p_slider->setPosition(sf::Vector2f(getPosFromValue(), 0.f));
+                if (m_callback) m_callback(m_currentValue);
+                refreshFlag = true;
+            }
         }
-    }
-
-    if (m_currentValue != lastValue) {
-        m_p_slider->setPosition(sf::Vector2f(getPosFromValue(), 0.f));
-        if (m_callback) m_callback(m_currentValue);
-        refreshFlag = true;
     }
 }
 
@@ -90,9 +88,11 @@ void gui::Slider::updateSliderSize() {
 }
 
 int gui::Slider::getValueFromPos(int x) {
-    const float maxPos = m_p_background->getSize().x - m_p_slider->getSize().x;
-    const float percentage = static_cast<float>(x) * 100.f / maxPos;
-    return (m_max - m_min) * percentage / 100 + m_min;
+    const sf::FloatRect bounds = m_p_background->getGlobalBounds();
+    const float minPos = bounds.position.x - m_p_background->getOrigin().x + m_p_background->getOutlineThickness();
+    const float maxPos = minPos + bounds.size.x;
+    const float percentage = (std::clamp(static_cast<float>(x), minPos, maxPos) - minPos) * 100.f / (maxPos - minPos);
+    return (m_max - m_min) * percentage / (100.f - (100.f / static_cast<float>(m_max + 1 - m_min) - 1)) + m_min;
 }
 
 float gui::Slider::getPosFromValue() {

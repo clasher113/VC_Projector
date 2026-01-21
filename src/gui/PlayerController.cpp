@@ -60,6 +60,7 @@ gui::PlayerController::~PlayerController() {
 
 void gui::PlayerController::onFileOpen(size_t framesCount) {
 	m_p_slider->setRange(0, framesCount);
+	m_p_slider->setValue(0);
 	updateText(0);
 }
 
@@ -119,6 +120,6 @@ void gui::PlayerController::generateTextures() {
 }
 
 void gui::PlayerController::updateText(size_t currentFrame) {
-	m_p_text->setString("Frame: " + std::to_string(currentFrame) + '/' + std::to_string(m_p_player->getFramesCount()));
+	m_p_text->setString("Frame: " + std::to_string(currentFrame + 1) + '/' + std::to_string(m_p_player->getFramesCount()));
 	m_p_text->setOrigin(sf::Vector2f(m_p_text->getGlobalBounds().size.x, 0.f));
 }

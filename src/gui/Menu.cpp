@@ -41,6 +41,7 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 		window.setIconified(true);
 		std::vector<std::string> result = path.result();
 		window.setIconified(false);
+		m_justOpened = true;
 		if (result.empty()) return;
 		m_p_gifPlayer->close();
 		fs::path filePath(result.back());
@@ -48,15 +49,9 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 			m_p_imageContainer->removeElement(m_p_playerController);
 			m_p_gifPlayer->openFile(filePath);
 			m_p_texture->resize(m_p_gifPlayer->getSize());
-			if (m_p_gifPlayer->getFramesCount() > 1) m_p_imageContainer->addElement(m_p_playerController, 0);
-			if (m_p_gifPlayer->getFramesCount() < 2 || m_p_playerController->isPaused()){
-				if (m_p_gifPlayer->hasNewFrame()) {
-					m_p_texture->update(m_p_gifPlayer->getPixels());
-					m_p_sprite->setTexture(*m_p_texture, true);
-					updateContent();
-				}
+			if (m_p_gifPlayer->getFramesCount() > 1) {
+				m_p_imageContainer->addElement(m_p_playerController, 0);
 			}
-			m_justOpened = true;
 		} else {
 			if (!m_p_texture->loadFromFile(filePath.string())) {
 				std::cout << "Loading error" << std::endl;
@@ -143,7 +138,6 @@ void gui::Menu::onUpdate(const float deltaTime, bool& refreshFlag) {
 		m_justOpened = false;
 		return;
 	}
-	if (m_p_gifPlayer->getFramesCount() < 2) return;
 	m_p_gifPlayer->update(m_p_playerController->isPaused() ? 0.f : deltaTime);
 	if (m_p_gifPlayer->hasNewFrame()) {
 		m_p_texture->update(m_p_gifPlayer->getPixels());
