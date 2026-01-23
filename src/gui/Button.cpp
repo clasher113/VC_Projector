@@ -10,15 +10,15 @@
 
 using namespace gui;
 
-const sf::Color IDLE_COLOR(100, 100, 100);
-const sf::Color HOVER_COLOR(147, 147, 147);
-const sf::Color CLICKED_COLOR(60, 140, 200);
+static const sf::Color IDLE_COLOR(100, 100, 100);
+static const sf::Color HOVER_COLOR(147, 147, 147);
+static const sf::Color CLICKED_COLOR(60, 140, 200);
 
-static sf::Texture temp;
+static const sf::Texture temp;
 
 Button::Button(const sf::Font& font) :
-    m_lastState(State::IDLE),
-    m_currentState(State::IDLE),
+    m_lastState(Button::State::IDLE),
+    m_currentState(Button::State::IDLE),
 	m_p_shape(new sf::RectangleShape(sf::Vector2f(100.f, 30.f))),
 	m_p_text(new sf::Text(font, "The Button", 20U)),
 	m_p_iconSprite(new sf::Sprite(temp))
@@ -39,25 +39,25 @@ Button::~Button() {
 
 void Button::onEvent(const sf::Event& event, bool& refreshFlag, const sf::Vector2f& offset) {
 	if (const auto pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
-		if (pressed->button == sf::Mouse::Button::Left && m_currentState == State::HOVER) {
-			m_currentState = State::PRESSED;
+		if (pressed->button == sf::Mouse::Button::Left && m_currentState == Button::State::HOVER) {
+			m_currentState = Button::State::PRESSED;
 		}
 	}
 	else if (const auto released = event.getIf<sf::Event::MouseButtonReleased>()) {
-		if (released->button == sf::Mouse::Button::Left && m_currentState == State::PRESSED) {
-			m_currentState = State::HOVER;
+		if (released->button == sf::Mouse::Button::Left && m_currentState == Button::State::PRESSED) {
+			m_currentState = Button::State::HOVER;
 		}
 	}
 	else if (const auto moved = event.getIf<sf::Event::MouseMoved>()) {
 		if (getTransform().transformRect(m_p_shape->getGlobalBounds()).contains(sf::Vector2f(moved->position.x, moved->position.y) - offset)) {
-			m_currentState = State::HOVER;
+			m_currentState = Button::State::HOVER;
 		}
 		else {
-			m_currentState = State::IDLE;
+			m_currentState = Button::State::IDLE;
 		}
 	}
 	else if (event.getIf<sf::Event::MouseLeft>()){
-		m_currentState = State::IDLE;
+		m_currentState = Button::State::IDLE;
 	}
 	if (m_currentState != m_lastState) {
 		refreshFlag = true;

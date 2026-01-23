@@ -4,6 +4,7 @@
 #include "Container.hpp"
 #include "../GifPlayer.hpp"
 #include "../Window.hpp"
+#include "../Util.hpp"
 #include "PlayerController.hpp"
 #include "portable-file-dialogs.h"
 
@@ -44,21 +45,25 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 		m_justOpened = true;
 		if (result.empty()) return;
 		m_p_gifPlayer->close();
+#ifdef _WIN32
+		fs::path filePath(pfd::internal::str2wstr(result.back()));
+#else
 		fs::path filePath(result.back());
+#endif // _WIN32
 		if (filePath.extension() == ".gif") {
 			m_p_imageContainer->removeElement(m_p_playerController);
-			m_p_gifPlayer->openFile(filePath);
-			m_p_texture->resize(m_p_gifPlayer->getSize());
-			if (m_p_gifPlayer->getFramesCount() > 1) {
-				m_p_imageContainer->addElement(m_p_playerController, 0);
+			if (m_p_gifPlayer->openFile(filePath)) {
+				m_p_texture->resize(m_p_gifPlayer->getSize());
+				if (m_p_gifPlayer->getFramesCount() > 1) {
+					m_p_imageContainer->addElement(m_p_playerController, 0);
+				}			
 			}
 		} else {
-			if (!m_p_texture->loadFromFile(filePath.string())) {
-				std::cout << "Loading error" << std::endl;
-				return;
+			if (m_p_texture->loadFromFile(filePath.string())) {
+				m_p_sprite->setTexture(*m_p_texture, true);
+				updateContent();
 			}
-			m_p_sprite->setTexture(*m_p_texture, true);
-			updateContent();
+			else showError("Error loading file");
 		}
 		if (m_onModeChangeCallback) m_onModeChangeCallback();
 	});

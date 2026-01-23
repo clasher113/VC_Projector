@@ -4,6 +4,13 @@
 #include <string>
 #include <cstring>
 #include <SFML/Network/Socket.hpp>
+#ifdef _WIN32
+#define NOMINMAX
+#define LEAN_AND_MEAN
+#include <Windows.h>
+#elif __linux__
+#include <cstdlib>
+#endif // _WIN32
 
 #define REFNSIZE(VALUE) &VALUE, sizeof(VALUE)
 
@@ -32,4 +39,14 @@ extern inline std::string toString(sf::Socket::Status status) {
         case sf::Socket::Status::Error: return "Error";
     }
     return "";
+}
+
+extern inline void showError(std::string_view message) {
+    const std::string title = "VC Projector error";
+#ifdef _WIN32
+    MessageBoxA(NULL, message.data(), title.c_str(), MB_ICONERROR);
+#elif __linux__
+    std::string command = "zenity --info --title='" + title + "' --text='" + message.data() + "'";
+    system(command);
+#endif // _WIN32
 }

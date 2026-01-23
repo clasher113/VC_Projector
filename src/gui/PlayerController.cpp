@@ -49,6 +49,16 @@ m_p_text(new sf::Text(font, "", 20U))
 		playPauseButton->setIcon(*(m_isPaused ? m_p_playTexture : m_p_pauseTexture));
 	});
 	addElement(stopButton);
+
+	m_p_slider->setOnGrabbedCallback([this, playPauseButton]() {
+		m_wasPaused = m_isPaused;
+		m_isPaused = true;
+		playPauseButton->setIcon(*(m_isPaused ? m_p_playTexture : m_p_pauseTexture));
+	});
+	m_p_slider->setOnReleasedCallback([this, playPauseButton]() {
+		m_isPaused = m_wasPaused;
+		playPauseButton->setIcon(*(m_isPaused ? m_p_playTexture : m_p_pauseTexture));
+	});
 }
 
 gui::PlayerController::~PlayerController() {

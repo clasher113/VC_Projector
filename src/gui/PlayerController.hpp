@@ -26,7 +26,7 @@ public:
     bool isPaused() const;
 
 private:
-    bool m_isPaused = false;
+    bool m_isPaused = false, m_wasPaused = false;
 
     gui::Slider* m_p_slider;
 

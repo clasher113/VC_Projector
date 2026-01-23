@@ -1,6 +1,6 @@
 #include "Network.hpp"
 
-#include "Util.hpp"
+#include "../Util.hpp"
 
 #include <SFML/Network/IpAddress.hpp>
 #ifdef _DEBUG
