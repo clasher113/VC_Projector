@@ -24,7 +24,7 @@ int main() {
 	window.setFramerateLimit(syncPacket.framerate);
 	Network network;
 
-	Status currentStatus = Status::WAITING, lastStatus = Status::NONE;
+	Status currentStatus = Status::WAITING;
 	bool synchonized = false;
 
 	sf::Clock clock;
@@ -238,9 +238,8 @@ int main() {
 				}
 			}, nextPacket.value());
 		}
-		if (lastStatus != currentStatus){
-			lastStatus = currentStatus;
-			if (currentStatus != Status::CAPTURING){
+		if (window.getStatus() != currentStatus){
+			if (window.getStatus() == Status::CAPTURING){
 				previousPixels.clear();
 			}
 			window.setStatus(currentStatus);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Util.hpp"
+#include "../Util.hpp"
 #include "../Enum.hpp"
 
 #include <cstdint>

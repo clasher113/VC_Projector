@@ -42,12 +42,14 @@ public:
     void pollEvents();
 
     const sf::Color* const capture();
+    Status getStatus() const;
 
     void draw();
 
 private:
     bool m_updateRequire = true, m_grabbed = false;
 
+    Status m_currentStatus = Status::NONE;
     sf::Vector2u m_captureSize;
     sf::Vector2i m_grabbedOffset;
 

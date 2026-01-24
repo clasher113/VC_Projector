@@ -9,7 +9,8 @@ enum class Status {
 	SYNCING,
 	READY,
 	CAPTURING,
-	INITIALIZING
+	INITIALIZING,
+	LOADING_GIF
 };
 
 enum BitMask : uint32_t {

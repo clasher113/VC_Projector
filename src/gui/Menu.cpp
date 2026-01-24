@@ -51,6 +51,9 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 		fs::path filePath(result.back());
 #endif // _WIN32
 		if (filePath.extension() == ".gif") {
+			Status currentStatus = window.getStatus();
+			window.setStatus(Status::LOADING_GIF);
+			window.draw();
 			m_p_imageContainer->removeElement(m_p_playerController);
 			if (m_p_gifPlayer->openFile(filePath)) {
 				m_p_texture->resize(m_p_gifPlayer->getSize());
@@ -58,6 +61,7 @@ gui::Menu::Menu(vcp::Window& window, const sf::Font& font, const sf::Vector2u& c
 					m_p_imageContainer->addElement(m_p_playerController, 0);
 				}			
 			}
+			window.setStatus(currentStatus);
 		} else {
 			if (m_p_texture->loadFromFile(filePath.string())) {
 				m_p_sprite->setTexture(*m_p_texture, true);

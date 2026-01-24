@@ -176,8 +176,10 @@ void vcp::Window::setStatus(Status status) {
 		case Status::READY: statusStr = "Ready"; break;
 		case Status::CAPTURING: statusStr = "Capturing"; break;
 		case Status::INITIALIZING: statusStr = "Initializing"; break;
+		case Status::LOADING_GIF: statusStr = "Loading GIF"; break;
 	}
 	m_statusText.setString("Status: " + statusStr);
+	m_currentStatus = status;
 	m_updateRequire = true;
 }
 
@@ -270,6 +272,10 @@ const sf::Color* const vcp::Window::capture() {
 		m_p_menu->getContentPixels(m_p_pixels);
 	}
 	return m_p_pixels;
+}
+
+Status vcp::Window::getStatus() const {
+	return m_currentStatus;
 }
 
 void vcp::Window::draw() {
