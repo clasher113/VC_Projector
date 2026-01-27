@@ -2,6 +2,7 @@ local config = require("projector:config")
 local display = require("projector:display")
 local synchronizer = require("projector:synchronizer")
 local util = require("projector:util")
+local multiplayer = require("projector:multiplayer")
 
 local skeleton = entity.skeleton
 local transform = entity.transform
@@ -9,6 +10,19 @@ local transform = entity.transform
 local projector_bone_index = skeleton:index("projector")
 local disk_1_bone_index = skeleton:index("disk_1")
 local disk_2_bone_index = skeleton:index("disk_2")
+local owner_text_preset = {
+    display = "y_free_billboard",
+    scale = 0.01,
+    render_distance = 16
+}
+
+local owner_pid = SAVED_DATA.owner_pid or ARGS.owner_pid or 0
+
+local text_id, TextObject
+if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+    local api = multiplayer.get_api()
+    text_id, TextObject = api.text3d.show(vec3.add(transform:get_pos(), { 0, 0.7, 0 } ), "Owner: " .. player.get_name(owner_pid), owner_text_preset)
+end
 
 function on_attacked(attacker, pid)
 	entity:despawn()
@@ -44,4 +58,19 @@ function on_update(tps)
 		skeleton:set_matrix(disk_1_bone_index, matrix)
 		skeleton:set_matrix(disk_2_bone_index, matrix)
 	end
+end
+
+function get_owner_pid()
+    return owner_pid
+end
+
+function on_despawn()
+    if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+        local api = multiplayer.get_api()
+        api.text3d.hide(text_id)
+    end
+end
+
+function on_save()
+    SAVED_DATA.owner_pid = owner_pid
 end

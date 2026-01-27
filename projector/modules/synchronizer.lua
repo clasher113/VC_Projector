@@ -216,7 +216,6 @@ function synchronizer.server_routine()
             out_buffer:put_uint16(config.resolution[2])
             out_buffer:put_uint16(config.capture_size[1])
             out_buffer:put_uint16(config.capture_size[2])
-            synchronizer.is_syncing = false
         elseif (status == util.synchronizer_status.CAPTURING) then
             bit_mask = bit.bor(bit_mask, util.packet_bitmask.CAPTURE)
             out_buffer:put_bool(true)

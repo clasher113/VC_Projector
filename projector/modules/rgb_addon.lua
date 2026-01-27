@@ -21,7 +21,7 @@ local function unpack_color(rgb)
 	return { bit.band(rgb, 0x00F), bit.rshift(bit.band(rgb, 0x0F0), 4), bit.rshift(bit.band(rgb, 0xF00), 8) }
 end
 
-function rgb_addon.initialize()
+function rgb_addon.on_world_open()
 	if (pack.is_installed(addon_id)) then
 		for i=0, 4095 do
 			rgb_addon.blocks_indices[i] = block.index(addon_id .. ":rgb_" .. tostring(i))

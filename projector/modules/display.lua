@@ -16,7 +16,7 @@ local blocks_indices = {}
 local framerate_time = time.uptime()
 local framerate = 0
 
-function display.initialize()
+function display.on_world_open()
 	for i=0, 15 do
 		blocks_indices[i] = block.index("projector:black" .. tostring(i))
 	end
