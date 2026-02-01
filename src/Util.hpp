@@ -47,6 +47,6 @@ extern inline void showError(std::string_view message) {
     MessageBoxA(NULL, message.data(), title.c_str(), MB_ICONERROR);
 #elif __linux__
     std::string command = "zenity --info --title='" + title + "' --text='" + message.data() + "'";
-    system(command);
+    system(command.c_str());
 #endif // _WIN32
 }
