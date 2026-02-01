@@ -1,5 +1,6 @@
 local multiplayer = {}
 
+multiplayer.logged_in = false
 multiplayer.sides = {
     SINGLEPLAYER = 0,
     SERVER = 1,
@@ -43,10 +44,19 @@ function multiplayer.on_world_open()
                             )
                         end
                     }
+                },
+                custom_fields = {
+                    owner_pid = {
+                        maximum_deviation = 1,
+                        evaluate_deviation = api.entities.eval.NotEquals,
+                        provider = function(uid, field_name)
+                            return entities.get(uid):get_component("projector:projector").get_owner_pid()
+                        end
+                    }
                 }
 	        })
         elseif (side == multiplayer.sides.CLIENT) then
-            api = require(string.format("%s:api/%s/api", m.pack_id, m.api_references.Neutron[2]) )[m.side]
+            api = require(string.format("%s:api/%s/api", m.pack_id, m.api_references.Neutron.latest) )[m.side]
         end
 
         debug.log("Projector running in multiplayer mode. Side: " .. sides_info[side].name)

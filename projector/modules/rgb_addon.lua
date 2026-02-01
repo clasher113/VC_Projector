@@ -40,9 +40,12 @@ function rgb_addon.get_textures_data()
 	end
 	packs["core"] = { path = "res:" }
 	for pack_name, pack in pairs(packs) do
-		for __, texture_file in pairs(file.list(pack.path .. "/textures/blocks/")) do
-			all_textures[file.stem(texture_file)] = texture_file
-		end
+        local dir = pack.path .. "/textures/blocks/"
+        if (file.isdir(dir)) then 
+            for __, texture_file in pairs(file.list(dir)) do
+                all_textures[file.stem(texture_file)] = texture_file
+            end
+        end
 	end
 	for id = 1, block.defs_count() do
 		local block_name = block.name(id)

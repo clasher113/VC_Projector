@@ -35,13 +35,13 @@ function instance_limit.set_position(player_id, new_position)
     end
 end
 
-function instance_limit.cleanup(player_id, ingore_pos)
+function instance_limit.cleanup(player_id, ignore_pos)
 	if (database[player_id] ~= nil) then
         for key, position in pairs(database[player_id].positions) do
             local block_id = block.get(position[1], position[2], position[3])
             if (block_id == projector_block_index) then
                 local owner_pid = util.get_owner_pid(position[1], position[2], position[3])
-                if (owner_pid == player_id and (ingore_pos == nil or not vec3_equal(position, ingore_pos))) then
+                if (owner_pid == player_id and (ignore_pos == nil or not vec3_equal(position, ignore_pos))) then
                     block.destruct(position[1], position[2], position[3], player_id)
                 end
             elseif (block_id ~= -1) then

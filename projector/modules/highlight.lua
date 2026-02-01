@@ -42,7 +42,7 @@ function highlight.refresh(self)
 
 	if (not config.highlight_area or synchronizer.get_status() == util.synchronizer_status.CAPTURING) then return end
 
-	position = vec3.add(vec3.add(display.position, 0.5), config.offset)
+	position = vec3.add(vec3.add(display.get_position(hud.get_player()), 0.5), config.offset)
 	size = vec2.sub(config.resolution, 1)
 
 	distance = (size[1] + size[2]) * 2

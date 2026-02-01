@@ -5,16 +5,21 @@ local display = require("projector:display")
 local instance_limit = require("projector:instance_limit")
 local highlight = require("projector:highlight")
 local multiplayer = require("projector:multiplayer")
+local rules = require("projector:rules")
 
 function on_world_open()
     multiplayer.on_world_open()
-	config.on_world_open()
+    if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+        rules.on_world_open()
+    end
+    config.on_world_open()
 	rgb_addon.on_world_open()
 	display.on_world_open()
 	instance_limit.on_world_open()
     if (multiplayer.get_side() ~= multiplayer.sides.SERVER) then
         synchronizer.start_server()
     end
+    synchronizer.initialize_events()
 end
 
 function on_world_tick()

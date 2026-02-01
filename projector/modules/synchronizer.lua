@@ -4,6 +4,8 @@ local config = require("projector:config")
 local display = require("projector:display")
 local rgb_addon = require("projector:rgb_addon")
 local util = require("projector:util")
+local multiplayer = require("projector:multiplayer")
+local rules = require("projector:rules")
 
 local synchronizer = {
     messages = {},
@@ -20,7 +22,144 @@ local client
 local refresh_timer = 0.0
 local status_update_time = 0
 local wait_for_respond = false
+local send_frames = 3
 local status = util.synchronizer_status.NOT_CONNECTED
+local capturing_players = {}
+
+local function send_to_players(api, byte_array, owner_pid, event_name)
+    local player_config = config.get_player_config(owner_pid)
+    local position = display.get_position(owner_pid)
+    if (not player_config or not position) then return end
+    local config_bytes = bjson.tobytes( {
+        config = {
+            resolution = player_config.resolution,
+            offset = player_config.offset,
+            axis = player_config.axis,
+            orientation = player_config.orientation,
+            rgb_mode = player_config.rgb_mode
+        },
+        position = position,
+        player_id = owner_pid,
+    }, false)
+
+    byte_array:append(config_bytes)
+    byte_array:append(bit_converter.int64_to_bytes(config_bytes.size))
+
+    local pos = vec3.add(position, player_config.offset)
+	local radius = app.get_setting("chunks.load-distance") * 16 + math.max(player_config.resolution[1], player_config.resolution[2]) / 2
+
+	if (player_config.orientation == util.orientation.VERTICAL) then
+		if (player_config.axis == util.axis.X) then
+			vec3.add(pos, { player_config.resolution[1] / 2, player_config.resolution[2] / 2, 1.0 }, pos)
+		elseif (player_config.axis == util.axis.Z) then
+			vec3.add({ 1.0, player_config.resolution[2] / 2, player_config.resolution[1] / 2 }, pos)
+		end
+	elseif (player_config.orientation == util.orientation.HORIZONTAL) then
+		if (player_config.axis == util.axis.X) then
+			vec3.add({ player_config.resolution[1] / 2, 1.0, player_config.resolution[2] / 2 }, pos)
+		elseif (player_config.axis == util.axis.Z) then
+			vec3.add(pos, { player_config.resolution[2] / 2, 1.0, player_config.resolution[1] / 2 }, pos)
+		end
+	end
+
+    local clients = api.sandbox.players.get_in_radius( pos, radius)
+
+    for _, idt in pairs(clients) do
+        if (owner_pid ~= idt.pid) then
+            local target_client = api.accounts.by_identity.get_client(idt.identity)
+            api.events.tell("projector", event_name, target_client, byte_array)
+        end
+    end
+end
+
+local function unpack_config(byte_array)
+    local config_size = bit_converter.bytes_to_int64(byte_array:slice(byte_array.size - 8 + 1, 8))
+    local player_config = bjson.frombytes(byte_array:slice(byte_array.size - 8 - config_size + 1, config_size))
+    local position = player_config.position
+    display.set_position(position[1], position[2], position[3], player_config.player_id)
+    config.set_player_config(player_config.config, player_config.player_id)
+    return player_config.player_id
+end
+
+function synchronizer.initialize_events()
+    local api = multiplayer.get_api()
+    if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+        api.events.on("projector", "send_pixels", function(Client, byte_array)
+            local player_id = Client.player.pid
+            local player_rules = rules.get_rules(player_id)
+            if (player_rules.allow_use == false) then
+                api.accounts.kick(Client.account, "Out of sync", false)
+            end
+            display.update_with_pixels(byte_array, player_id)
+            send_to_players(api, byte_array, player_id, "receive_pixels")
+
+            api.events.tell("projector", "next_frame", Client, {})
+        end)
+        api.events.on("projector", "send_chunks", function(Client, byte_array)
+            local player_id = Client.player.pid
+            local player_rules = rules.get_rules(player_id)
+            if (player_rules.allow_use == false) then
+                api.accounts.kick(Client.account, "Out of sync", false)
+            end
+            display.update_with_chunks(byte_array, player_id)
+            send_to_players(api, byte_array, player_id, "receive_chunks")
+
+            api.events.tell("projector", "next_frame", Client, {})
+        end)
+        api.events.on("projector", "capture_status", function (Client, byte_array)
+            local player_id = Client.player.pid
+            if (capturing_players[player_id] == nil) then
+                capturing_players[player_id] = {}
+            end
+            local capturing = bit_converter.byte_to_bool(byte_array[1])
+            if (capturing == true) then
+                capturing_players[player_id] = 0
+            else
+                capturing_players[player_id] = nil
+            end
+
+            api.events.echo("projector", "capture_status", bjson.tobytes( { [tostring(player_id)] = capturing } ))
+        end)
+        events.on("server:player_ground_landing", function (Client)
+            if (#capturing_players > 0) then
+                local capturing = {}
+                for k, _ in pairs(capturing_players) do
+                    capturing[k] = true
+                end
+                api.events.tell("projector", "capture_status", Client, bjson.tobytes(capturing))
+            end
+            api.events.tell("projector", "logged_in", Client, bjson.tobytes(rules.get_rules(Client.player.pid)))
+        end)
+        events.on("server:client_disconnected", function (Client)
+            local player_id = Client.player.pid
+            if (capturing_players[player_id] ~= nil) then
+                capturing_players[player_id] = nil
+                api.events.echo("projector", "capture_status", bjson.tobytes( { [tostring(player_id)] = false } ))
+            end
+        end)
+    elseif (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+        api.events.on("projector", "next_frame", function()
+            send_frames = send_frames + 1
+        end)
+        api.events.on("projector", "receive_pixels", function(byte_array)
+            local player_id = unpack_config(byte_array)
+            display.update_with_pixels(byte_array, player_id)
+        end)
+        api.events.on("projector", "receive_chunks", function(byte_array)
+            local player_id = unpack_config(byte_array)
+            display.update_with_chunks(byte_array, player_id)
+        end)
+        api.events.on("projector", "capture_status", function(byte_array)
+            for player_id, capturing in pairs(bjson.frombytes(byte_array)) do
+                capturing_players[tonumber(player_id)] = (capturing == true and 0 or nil)
+            end
+        end)
+        api.events.on("projector", "logged_in", function(byte_array)
+            multiplayer.logged_in = true
+            rules.apply_rules(bjson.frombytes(byte_array))
+        end)
+    end
+end
 
 function synchronizer.start_server()
     server = network.tcp_open(6969, function (socket)
@@ -44,11 +183,11 @@ function synchronizer.start_server()
 end
 
 function synchronizer.close_server()
-    if (server:is_open()) then
+    if (server and server:is_open()) then
         if (client ~= nil and client:is_alive() == true) then
             client:close()
         end
-        debug.log("Projector server stopped")    
+        debug.log("Projector server stopped")
         server:close()
     end
 end
@@ -112,7 +251,7 @@ local function receive()
 
     --debug.log("received " .. tostring(out_data:size()) .. " bytes")
     out_data:set_position(1)
-    return out_data    
+    return out_data
 end
 
 function synchronizer.server_routine()
@@ -171,7 +310,7 @@ function synchronizer.server_routine()
             if (capture_success == false) then
                 table.insert(synchronizer.messages, "Capture error")
             elseif (status == util.synchronizer_status.CAPTURING) then
-                 if (synchronizer.on_lag_callback ~= nil) then
+                if (synchronizer.on_lag_callback ~= nil) then
                     if (synchronizer.on_lag_callback()) then
                         return
                     end
@@ -180,11 +319,21 @@ function synchronizer.server_routine()
                 if (update_method == util.update_method.PIXELS) then
                     local pixels_size = buffer:get_uint32()
                     local pixels = buffer:get_bytes(pixels_size)
-                    display.update_with_pixels(pixels)
+                    if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+                        local api = multiplayer.get_api()
+                        api.events.send("projector", "send_pixels", pixels)
+                        send_frames = send_frames - 1
+                    end
+                    display.update_with_pixels(pixels, hud.get_player())
                 elseif (update_method == util.update_method.CHUNKS) then
-                    local chunksSize = buffer:get_uint32()
-                    local chunks = buffer:get_bytes(chunksSize)
-                    display.update_with_chunks(chunks)
+                    local chunks_size = buffer:get_uint32()
+                    local chunks = buffer:get_bytes(chunks_size)
+                    if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+                        local api = multiplayer.get_api()
+                        api.events.send("projector", "send_chunks", chunks)
+                        send_frames = send_frames - 1
+                    end
+                    display.update_with_chunks(chunks, hud.get_player())
                 end
             end
         end
@@ -204,7 +353,7 @@ function synchronizer.server_routine()
         end
     end
 
-    if (not wait_for_respond) then
+    if (not wait_for_respond and send_frames > 1) then
         local out_buffer = data_buffer(nil, util.BYTE_ORDER, config.use_bytearray)
 
         local bit_mask = util.packet_bitmask.PING_PONG
@@ -244,6 +393,18 @@ end
 
 function synchronizer.get_status()
     return status
+end
+
+function synchronizer.is_player_capturing(player_id)
+    if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+        return capturing_players[player_id] ~= nil
+    else
+        if (player_id == hud.get_player()) then
+            return status == util.synchronizer_status.CAPTURING
+        else
+            return capturing_players[player_id] ~= nil
+        end
+    end
 end
 
 return synchronizer

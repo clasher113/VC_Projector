@@ -4,13 +4,15 @@ local rgb_addon = require("projector:rgb_addon")
 local synchronizer = require("projector:synchronizer")
 local util = require("projector:util")
 local highlight = require("projector:highlight")
+local multiplayer = require("projector:multiplayer")
+local rules = require("projector:rules")
 
-local orientations = { 
+local orientations = {
 	[util.orientation.VERTICAL] = "Vertical",
 	[util.orientation.HORIZONTAL] = "Horizontal"
 }
 local axes = {
-	[util.axis.X] = "X", 
+	[util.axis.X] = "X",
 	[util.axis.Z] = "Z"
 }
 
@@ -54,6 +56,9 @@ function on_open()
 		end
 		document["rgb_mode"].checked = config.rgb_mode
 		document["same_size"].checked = config.same_size
+        if (config.same_size) then
+            config.capture_size = table.copy(config.resolution)
+        end
 		document["use_bytearray"].checked = config.use_bytearray
 		document["use_chunks"].checked = config.use_chunks
 		document["highlight_area_checkbox"].checked = config.highlight_area
@@ -78,6 +83,16 @@ function on_open()
 			end
 			return false
 		end
+
+        local current_rules = rules.get_rules()
+        document["rgb_mode"].enabled = current_rules.allow_rgb_mode
+        document["refresh_rate_trackbar"].max = current_rules.fps_max
+        if (#current_rules.allowed_orientations == 1) then
+            document["orientation"].enabled = false
+        end
+        if (#current_rules.allowed_axes == 1) then
+            document["axis"].enabled = false
+        end
 	end
 end
 
@@ -110,10 +125,14 @@ function stop()
 	document["main_button"].text = "Start"
 	display.current_framerate = 0
 	if (config.clear_on_stop) then
-		display.clear()
+		display.clear(hud.get_player())
 	end
 	log_message("Capturing stopped")
 	highlight.refresh()
+    if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+        local api = multiplayer.get_api()
+        api.events.send("projector", "capture_status", Bytearray( { 0 } ))
+    end
 end
 
 function start()
@@ -122,6 +141,10 @@ function start()
 	log_message("Capturing started")
 	config.write()
 	highlight.stop()
+    if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+        local api = multiplayer.get_api()
+        api.events.send("projector", "capture_status", Bytearray( { 1 } ))
+    end
 end
 
 function main_button_func()
@@ -206,7 +229,8 @@ local function validate_textbox(input, min, max, textbox)
 end
 
 function projection_size_x_validator(string)
-	return validate_textbox(string, 1, 255, document["projection_size_x"])
+    local current_rules = rules.get_rules()
+	return validate_textbox(string, current_rules.resolution_min[1], current_rules.resolution_max[1], document["projection_size_x"])
 end
 
 function projection_size_x_consumer(string)
@@ -225,7 +249,8 @@ function projection_size_x_supplier()
 end
 
 function projection_size_y_validator(string)
-	return validate_textbox(string, 1, 255, document["projection_size_y"])
+    local current_rules = rules.get_rules()
+	return validate_textbox(string, current_rules.resolution_min[2], current_rules.resolution_max[2], document["projection_size_y"])
 end
 
 function projection_size_y_consumer(string)
@@ -274,7 +299,8 @@ function capture_size_y_supplier()
 end
 
 function projection_offset_x_validator(string)
-	return validate_textbox(string, 1, 255, document["projection_offset_x"])
+    local current_rules = rules.get_rules()
+	return validate_textbox(string, current_rules.offset_min[1], current_rules.offset_max[1], document["projection_offset_x"])
 end
 
 function projection_offset_x_consumer(string)
@@ -289,7 +315,8 @@ function projection_offset_x_supplier()
 end
 
 function projection_offset_y_validator(string)
-	return validate_textbox(string, 0, 255, document["projection_offset_y"])
+    local current_rules = rules.get_rules()
+	return validate_textbox(string, current_rules.offset_min[2], current_rules.offset_max[2], document["projection_offset_y"])
 end
 
 function projection_offset_y_consumer(string)
@@ -304,7 +331,8 @@ function projection_offset_y_supplier()
 end
 
 function projection_offset_z_validator(string)
-	return validate_textbox(string, 0, 255, document["projection_offset_z"])
+    local current_rules = rules.get_rules()
+	return validate_textbox(string, current_rules.offset_min[3], current_rules.offset_max[3], document["projection_offset_z"])
 end
 
 function projection_offset_z_consumer(string)
@@ -370,7 +398,7 @@ function clear_display()
 	if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 		log_message("Does it make sense while the projector is running?")
 	else
-		display.clear()
+		display.clear(hud.get_player())
 		log_message("Display cleaned")
 	end
 end
