@@ -3,15 +3,15 @@
 #include "font_binary.hpp"
 #include "gui/Menu.hpp"
 
-#include <cstring>
 #include <SFML/Window/Event.hpp>
+
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <dwmapi.h>
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Dwmapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
 #elif __linux__
-#include <sys/shm.h>
-#include <X11/Xatom.h>
 #include <X11/extensions/shape.h>
 #endif // _WIN32
 
@@ -34,18 +34,6 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 	SetWindowLong(getNativeHandle(), GWL_STYLE, WS_POPUP | WS_VISIBLE);
 	DwmExtendFrameIntoClientArea(getNativeHandle(), &margins);
 
-	HWND desktop = GetDesktopWindow();
-	m_desktopHdc = GetDC(desktop);
-	m_hCaptureDC = CreateCompatibleDC(m_desktopHdc);
-	m_hCaptureBitmap = CreateCompatibleBitmap(m_desktopHdc, captureSize.x, captureSize.y);
-	m_hOldBitmap = SelectObject(m_hCaptureDC, m_hCaptureBitmap);
-
-	m_bmi.bmiHeader.biBitCount = 32;
-	m_bmi.bmiHeader.biCompression = BI_RGB;
-	m_bmi.bmiHeader.biPlanes = 1;
-	m_bmi.bmiHeader.biHeight = captureSize.y;
-	m_bmi.bmiHeader.biWidth = captureSize.x;
-	m_bmi.bmiHeader.biSize = sizeof(BITMAPINFO);
 #elif __linux__
 	// make x11 window with transparent background
 	m_p_display = XOpenDisplay(NULL);
@@ -104,26 +92,15 @@ vcp::Window::Window(const sf::Vector2u& captureSize) :
 	});
 
 	setSize(captureSize);
+	m_screenCapture.initialize(captureSize);
 }
 
 vcp::Window::~Window() {
 	delete m_p_menu;
-#ifdef _WIN32
-	SelectObject(m_hCaptureDC, m_hOldBitmap);
-	DeleteObject(m_hCaptureBitmap);
-	DeleteDC(m_hCaptureDC);
-	ReleaseDC(NULL, m_desktopHdc);
-#elif __linux__
-	if (m_p_ShmInfo) {
-		shmdt(m_p_ShmInfo->shmaddr);
-		//shmctl(m_p_ShmInfo->shmid, IPC_RMID, 0);
-		XShmDetach(m_p_display, m_p_ShmInfo);
-		delete m_p_ShmInfo;
-	}
-	if (m_p_xImage) XDestroyImage(m_p_xImage);
-	if (m_p_display) XCloseDisplay(m_p_display);
-#endif // _WIN32
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
+#ifdef __linux__
+	if (m_p_display) XCloseDisplay(m_p_display);
+#endif // __linux__
 }
 
 bool vcp::Window::setSize(const sf::Vector2u& size) {
@@ -134,28 +111,8 @@ bool vcp::Window::setSize(const sf::Vector2u& size) {
 	m_border.setSize(sf::Vector2f(size.x, size.y));
 	m_statusContainerSprite.setPosition(sf::Vector2f(0.f, size.y + BORDER_THICKNESS * 2));
 	m_p_menu->onSizeChange(size);
+	m_screenCapture.setSize(size);
 
-#ifdef _WIN32
-	m_bmi.bmiHeader.biWidth = size.x;
-	m_bmi.bmiHeader.biHeight = size.y;
-
-	m_hCaptureBitmap = CreateCompatibleBitmap(m_desktopHdc, size.x, size.y);
-	SelectObject(m_hCaptureDC, m_hCaptureBitmap);
-#elif __linux__
-	if (m_p_xImage) XDestroyImage(m_p_xImage);
-	if (m_p_ShmInfo == nullptr) m_p_ShmInfo = new XShmSegmentInfo;
-
-	int scr = XDefaultScreen(m_p_display);
-
-	m_p_xImage = XShmCreateImage(m_p_display, DefaultVisual(m_p_display, scr), DefaultDepth(m_p_display, scr), ZPixmap,
-		NULL, m_p_ShmInfo, m_captureSize.x, m_captureSize.y);
-
-	m_p_ShmInfo->shmid = shmget(IPC_PRIVATE, m_p_xImage->bytes_per_line * m_p_xImage->height, IPC_CREAT | 0777);
-	m_p_ShmInfo->readOnly = False;
-	m_p_ShmInfo->shmaddr = m_p_xImage->data = (char*)shmat(m_p_ShmInfo->shmid, 0, 0);
-
-	XShmAttach (m_p_display, m_p_ShmInfo);	
-#endif // _WIN32
 	if (m_p_pixels != nullptr) delete[] m_p_pixels;
 	m_p_pixels = new sf::Color[size.x * size.y];
 	m_updateRequire = true;
@@ -254,21 +211,10 @@ void vcp::Window::pollEvents() {
 
 const sf::Color* const vcp::Window::capture() {
 	if (m_p_menu->getMode() == Mode::SCREEN) {
-#ifdef _WIN32
-		BitBlt(m_hCaptureDC, 0, 0, m_captureSize.x, m_captureSize.y, m_desktopHdc,
-			static_cast<int>(getPosition().x + BORDER_THICKNESS), static_cast<int>(getPosition().y + BORDER_THICKNESS), SRCCOPY);
-		GetDIBits(m_hCaptureDC, m_hCaptureBitmap, 0, m_captureSize.y, &m_p_pixels[0], &m_bmi, DIB_RGB_COLORS);
-#elif __linux__
-		// todo fix on wayland 
-		// https://github.com/KDE/xwaylandvideobridge
-		XShmGetImage(m_p_display, m_rootWindow, m_p_xImage, getPosition().x + BORDER_THICKNESS, getPosition().y + BORDER_THICKNESS, AllPlanes);
-		unsigned int location = (m_captureSize.y - 1) * (m_captureSize.x * 4);
-		for (int i = 0; i < m_captureSize.y; ++i) {
-			memcpy(&m_p_pixels[i * (m_captureSize.x)], &m_p_xImage->data[location], m_captureSize.x * 4);
-			location -= m_captureSize.x * 4;
-		}
-#endif // _WIN32
-	} else if (m_p_menu->getMode() == Mode::IMAGE) {
+		const sf::Vector2i capturePos = getPosition() + sf::Vector2i(BORDER_THICKNESS, BORDER_THICKNESS);
+		m_screenCapture.capture(capturePos, m_p_pixels);
+	}
+	else if (m_p_menu->getMode() == Mode::IMAGE) {
 		m_p_menu->getContentPixels(m_p_pixels);
 	}
 	return m_p_pixels;

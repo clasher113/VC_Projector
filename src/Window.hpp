@@ -7,18 +7,8 @@
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
-#ifdef _WIN32
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <dwmapi.h>
-#elif __linux__
-#include <X11/Xlib.h>
-#include <X11/extensions/XShm.h>
-#undef Status
-#undef None
-#endif // _WIN32
-
 #include "Enum.hpp"
+#include "ScreenCapture.hpp"
 
 namespace vcp {
     class Window;
@@ -62,19 +52,12 @@ private:
     sf::Color* m_p_pixels = nullptr;
 
     gui::Menu* m_p_menu = nullptr;
+    ScreenCapture m_screenCapture;
 
-    bool updateWindowSize(const sf::Vector2u& size);
-
-#ifdef _WIN32
-    BITMAPINFO m_bmi{};
-    HGDIOBJ m_hOldBitmap;
-    HBITMAP m_hCaptureBitmap;
-    HDC m_desktopHdc;
-    HDC m_hCaptureDC;
-#elif __linux__
+#ifdef __linux__
     Display* m_p_display = nullptr;
     ::Window m_window, m_rootWindow;
-    XImage* m_p_xImage = nullptr;
-    XShmSegmentInfo* m_p_ShmInfo = nullptr;
-#endif // _WIN32
+#endif // __linux__
+
+    bool updateWindowSize(const sf::Vector2u& size);
 };
