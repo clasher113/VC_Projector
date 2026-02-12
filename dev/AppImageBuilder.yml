@@ -2,6 +2,8 @@ version: 1
 
 script:
  - cp -r build AppDir
+ - ls build
+ - ls AppDir
 
 AppDir:
   path: AppDir
