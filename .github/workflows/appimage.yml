@@ -21,10 +21,10 @@ jobs:
         sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev libfreetype-dev
 
     - name: Configure
-      run: cmake -DCMAKE_BUILD_TYPE=Release ..
+      run: cmake cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build .
+      run: cmake --build build
 
     - name: Build AppImage
       uses: AppImageCrafters/build-appimage-action@v1
