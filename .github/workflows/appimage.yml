@@ -24,7 +24,10 @@ jobs:
       run: cmake cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build
+      run: |
+        cmake --build build
+        ls -l
+        ls -l build
 
     - name: Build AppImage
       uses: AppImageCrafters/build-appimage-action@v1
