@@ -1,17 +1,18 @@
 version: 1
 
 script:
+ - rm -rf AppDir || true
  - cp build/ProjectorServer $APPDIR
 
 AppDir:
-  path: AppDir
+  path: ./AppDir
 
   app_info:
     id: ProjectorServer
     name: ProjectorServer
     version: 1.0.0
     icon: ProjectorServer
-    exec: ProjectorServer
+    exec: build/ProjectorServer
 
   apt: 
     arch: amd64
