@@ -5,7 +5,7 @@ on:
     branches: [ server-app, "add-workflow" ]
   pull_request:
     branches: [ server-app, "add-workflow" ]
-
+     
 jobs: 
   build-appimage:
     runs-on: ubuntu-latest
