@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ProjectorServer
+Comment=
+TryExec=ProjectorServer
+Exec=ProjectorServer
+Icon=ProjectorServer
+MimeType=image/x-foo;
+Categories=Game;
