@@ -11,7 +11,7 @@ AppDir:
     exec: usr/bin/ProjectorServer
 
   apt: 
-    aarch: amd64
+    arch: amd64
     sources:
     - sourceline: deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse
     - sourceline: deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse
