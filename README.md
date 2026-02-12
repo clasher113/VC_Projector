@@ -3,17 +3,17 @@
 ### Install libraries
 #### Debian based distros
 ```sh
-sudo apt install libsfml-dev libudev-dev libopenal-dev libvorbis-dev libflac-dev libxrandr-dev libxcursor-dev libfreetype6-dev libgif-dev
+sudo apt install libxi-dev libxrandr-dev libxcursor-dev libudev-dev libgl1-mesa-dev libfreetype-dev
 ```
 
 #### RHEL based distros
 ```sh
-sudo dnf install SFML-devel systemd-devel giflib-devel
+sudo dnf install systemd-devel
 ```
 
 ### Building project with CMake
 ```sh
-git clone https://github.com/clasher113/VC_Projector.git -b server-app
+git clone --recurse-submodules https://github.com/clasher113/VC_Projector.git -b server-app
 cd VC_Projector
 mkdir build
 cd build
