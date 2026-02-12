@@ -8,7 +8,7 @@ AppDir:
     name: ProjectorServer
     version: 1.0.0
     icon: ProjectorServer
-    exec: usr/bin/ProjectorServer
+    exec: /home/runner/work/VC_Projector/VC_Projector/build/ProjectorServer
 
   apt: 
     arch: amd64
