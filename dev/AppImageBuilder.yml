@@ -1,12 +1,11 @@
 version: 1
 
 script:
- - rm -rf AppDir | true
- - cp -r build/ProjectorServer $APPDIR
- - ls
- - ls build
+ - rm -rf AppDir || true
+ - cp build/ProjectorServer $APPDIR
+
 AppDir:
-  path: ./AppDir
+  path: AppDir
 
   app_info:
     id: ProjectorServer
