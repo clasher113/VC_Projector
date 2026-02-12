@@ -1,7 +1,10 @@
 name: x86-64 AppImage
 
-on: [ push, pull_request ]
-  branches: [ server-app, add-workflow ]
+on:
+  push:
+    branches: [ server-app, add-workflow ]
+  pull_request:
+    branches: [ server-app, add-workflow ]
 
 jobs: 
   build-appimage:
