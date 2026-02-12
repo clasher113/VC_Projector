@@ -1,7 +1,10 @@
 version: 1
 
+script:
+ - cp -r build AppDir
+
 AppDir:
-  path: ./AppDir
+  path: AppDir
 
   app_info:
     id: ProjectorServer
