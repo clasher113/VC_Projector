@@ -6,7 +6,7 @@ AppDir:
   app_info:
     id: ProjectorServer
     name: ProjectorServer
-    version: 1.0
+    version: 1.0.0
     exec: usr/bin/ProjectorServer
 
   apt: 
