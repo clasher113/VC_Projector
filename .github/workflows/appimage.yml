@@ -27,7 +27,7 @@ jobs:
       run: cmake --build .
 
     - name: Build AppImage
-      uses: AppImageCrafters/build-appimage-action@add-workflow
+      uses: AppImageCrafters/build-appimage-action@v1
       with:
         recipe: dev/AppImageBuilder.yml
       env: 
