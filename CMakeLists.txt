@@ -28,8 +28,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE sfml-graphics sfml-system sfml-win
 set(LIBS_PATH ${PROJECT_SOURCE_DIR}/libs/)
 
 # link giflib
-set(GIFLIB_PATH ${LIBS_PATH}/giflib/lib/)
-file(GLOB GIFLIB_SOURCES ${GIFLIB_PATH}/*.h ${GIFLIB_PATH}/*.c)
+set(GIFLIB_PATH ${LIBS_PATH}/giflib/)
+set(GIFLIB_SOURCES
+    ${GIFLIB_PATH}/dgif_lib.c
+    ${GIFLIB_PATH}/gif_err.c
+    ${GIFLIB_PATH}/gifalloc.c
+    ${GIFLIB_PATH}/openbsd-reallocarray.c
+)
 target_include_directories(${PROJECT_NAME} PRIVATE ${GIFLIB_PATH})
 add_library(giflib STATIC ${GIFLIB_SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE giflib)
@@ -39,5 +44,11 @@ set(PORTABLE_FILE_DIALOGS_PATH ${LIBS_PATH}/portable-file-dialogs/)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PORTABLE_FILE_DIALOGS_PATH})
 
 if (UNIX)
-target_link_libraries(${PROJECT_NAME} PRIVATE Xext X11)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Xext X11)
+elseif (WIN32)
+    # link getopt for windows
+    set(GETOPT_FOR_WINDOWS_PATH ${LIBS_PATH}/getopt-for-windows/)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${GETOPT_FOR_WINDOWS_PATH})
+    add_library(getopt STATIC ${GETOPT_FOR_WINDOWS_PATH}/getopt.c)
+    target_link_libraries(${PROJECT_NAME} PRIVATE getopt)
 endif (UNIX)

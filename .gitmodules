@@ -3,4 +3,7 @@
 	url = https://github.com/samhocevar/portable-file-dialogs.git
 [submodule "libs/giflib"]
 	path = libs/giflib
-	url = https://github.com/mirrorer/giflib.git
+	url = https://git.code.sf.net/p/giflib/code
+[submodule "libs/getopt-for-windows"]
+	path = libs/getopt-for-windows
+	url = https://github.com/Chunde/getopt-for-windows.git
