@@ -8,7 +8,7 @@ sudo apt install libxi-dev libxrandr-dev libxcursor-dev libudev-dev libgl1-mesa-
 
 #### RHEL based distros
 ```sh
-sudo dnf install systemd-devel
+sudo dnf install libXi-devel libXrandr-devel libXcursor-devel systemd-devel mesa-libGL-devel freetype-devel
 ```
 
 ### Building project with CMake
