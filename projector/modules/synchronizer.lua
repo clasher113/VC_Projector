@@ -16,6 +16,7 @@ local synchronizer = {
 local PROTOCOL_MAGIC = 0xAAFFFAA
 local MAX_RECEIVE_SIZE = 1024 * 1024 -- bytes
 local STATUS_TIMEOUT_DURATION = 5 -- seconds
+local CONFIG_SIZE = 47
 local STATUS_FALLBACK = util.synchronizer_status.CONNECTED
 local server
 local client
@@ -30,20 +31,20 @@ local function send_to_players(api, byte_array, owner_pid, event_name)
     local player_config = config.get_player_config(owner_pid)
     local position = display.get_position(owner_pid)
     if (not player_config or not position) then return end
-    local config_bytes = bjson.tobytes( {
-        config = {
-            resolution = player_config.resolution,
-            offset = player_config.offset,
-            axis = player_config.axis,
-            orientation = player_config.orientation,
-            rgb_mode = player_config.rgb_mode
-        },
-        position = position,
-        player_id = owner_pid,
-    }, false)
 
-    byte_array:append(config_bytes)
-    byte_array:append(bit_converter.int64_to_bytes(config_bytes.size))
+    byte_array:reserve(byte_array.size + CONFIG_SIZE)
+    byte_array:append(bit_converter.int64_to_bytes(owner_pid))
+    byte_array:append(bit_converter.int64_to_bytes(position[1]))
+    byte_array:append(bit_converter.int64_to_bytes(position[2]))
+    byte_array:append(bit_converter.int64_to_bytes(position[3]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.resolution[1]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.resolution[2]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.offset[1]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.offset[2]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.offset[3]))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.axis))
+    byte_array:append(bit_converter.uint16_to_bytes(player_config.orientation))
+    byte_array:append( { player_config.rgb_mode } )
 
     local pos = vec3.add(position, player_config.offset)
 	local radius = app.get_setting("chunks.load-distance") * 16 + math.max(player_config.resolution[1], player_config.resolution[2]) / 2
@@ -73,12 +74,19 @@ local function send_to_players(api, byte_array, owner_pid, event_name)
 end
 
 local function unpack_config(byte_array)
-    local config_size = bit_converter.bytes_to_int64(byte_array:slice(byte_array.size - 8 + 1, 8))
-    local player_config = bjson.frombytes(byte_array:slice(byte_array.size - 8 - config_size + 1, config_size))
-    local position = player_config.position
-    display.set_position(position[1], position[2], position[3], player_config.player_id)
-    config.set_player_config(player_config.config, player_config.player_id)
-    return player_config.player_id
+    local player_config = data_buffer(byte_array:slice(byte_array.size - CONFIG_SIZE + 1, CONFIG_SIZE), "LE")
+    local player_id = player_config:get_int64()
+    display.set_position(player_config:get_int64(), player_config:get_int64(), player_config:get_int64(), player_id)
+    config.set_player_config( {
+        resolution = { player_config:get_uint16(), player_config:get_uint16() },
+        offset = { player_config:get_uint16(), player_config:get_uint16(), player_config:get_uint16() },
+        axis = player_config:get_uint16(),
+        orientation = player_config:get_uint16(),
+        rgb_mode = player_config:get_bool()
+    }, player_id)
+    byte_array:remove(byte_array.size - CONFIG_SIZE + 1, CONFIG_SIZE)
+    byte_array:trim()
+    return player_id
 end
 
 function synchronizer.initialize_events()
@@ -90,7 +98,8 @@ function synchronizer.initialize_events()
             if (player_rules.allow_use == false) then
                 api.accounts.kick(Client.account, "Out of sync", false)
             end
-            display.update_with_pixels(byte_array, player_id)
+            local pixels = compression.decode(byte_array)
+            display.update_with_pixels(pixels, player_id)
             send_to_players(api, byte_array, player_id, "receive_pixels")
 
             api.events.tell("projector", "next_frame", Client, {})
@@ -101,7 +110,8 @@ function synchronizer.initialize_events()
             if (player_rules.allow_use == false) then
                 api.accounts.kick(Client.account, "Out of sync", false)
             end
-            display.update_with_chunks(byte_array, player_id)
+            local chunks = compression.decode(byte_array)
+            display.update_with_chunks(chunks, player_id)
             send_to_players(api, byte_array, player_id, "receive_chunks")
 
             api.events.tell("projector", "next_frame", Client, {})
@@ -124,7 +134,7 @@ function synchronizer.initialize_events()
             if (#capturing_players > 0) then
                 local capturing = {}
                 for k, _ in pairs(capturing_players) do
-                    capturing[k] = true
+                    capturing[tostring(k)] = true
                 end
                 api.events.tell("projector", "capture_status", Client, bjson.tobytes(capturing))
             end
@@ -143,11 +153,11 @@ function synchronizer.initialize_events()
         end)
         api.events.on("projector", "receive_pixels", function(byte_array)
             local player_id = unpack_config(byte_array)
-            display.update_with_pixels(byte_array, player_id)
+            display.update_with_pixels(compression.decode(byte_array), player_id)
         end)
         api.events.on("projector", "receive_chunks", function(byte_array)
             local player_id = unpack_config(byte_array)
-            display.update_with_chunks(byte_array, player_id)
+            display.update_with_chunks(compression.decode(byte_array), player_id)
         end)
         api.events.on("projector", "capture_status", function(byte_array)
             for player_id, capturing in pairs(bjson.frombytes(byte_array)) do
@@ -321,7 +331,7 @@ function synchronizer.server_routine()
                     local pixels = buffer:get_bytes(pixels_size)
                     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
                         local api = multiplayer.get_api()
-                        api.events.send("projector", "send_pixels", pixels)
+                        api.events.send("projector", "send_pixels", compression.encode(pixels))
                         send_frames = send_frames - 1
                     end
                     display.update_with_pixels(pixels, hud.get_player())
@@ -330,7 +340,7 @@ function synchronizer.server_routine()
                     local chunks = buffer:get_bytes(chunks_size)
                     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
                         local api = multiplayer.get_api()
-                        api.events.send("projector", "send_chunks", chunks)
+                        api.events.send("projector", "send_chunks", compression.encode(chunks))
                         send_frames = send_frames - 1
                     end
                     display.update_with_chunks(chunks, hud.get_player())

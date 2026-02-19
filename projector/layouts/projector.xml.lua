@@ -398,6 +398,7 @@ function clear_display()
 	if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 		log_message("Does it make sense while the projector is running?")
 	else
+        config.write()
 		display.clear(hud.get_player())
 		log_message("Display cleaned")
 	end
