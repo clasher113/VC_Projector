@@ -212,7 +212,7 @@ function display.clear(player_id)
 	if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
 		local api = multiplayer.get_api()
         config.write()
-		api.events.send("projector", "send_pixels", pixels)
+		api.events.send("projector", "send_pixels", compression.encode(pixels))
         player_config.rgb_mode = rgb_enabled
         config.write()
 	end
