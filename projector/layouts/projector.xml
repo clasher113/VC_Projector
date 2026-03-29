@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<container id="root" scrollable="0" size="540,620" color="#888888cc">
+<container id="root" scrollable="0" size="540,620" color="#888888cc" context="projector">
     <label pos="235,10" id="title">Projector</label>
     <container color="#00000099" id="settings_1" scrollable="0" size="250,240" pos="10,30">
-        <label pos="10,10">Projection size in blocks:</label>
+        <label pos="10,10">@Projection size in blocks:</label>
         <textbox id="projection_size_x" pos="10,30" size="110,30" consumer="projection_size_x_consumer" 
 				 validator="projection_size_x_validator" supplier="projection_size_x_supplier" placeholder="Size X"/>
         <textbox id="projection_size_y" pos="130,30" size="110,30" consumer="projection_size_y_consumer" 
 				 validator="projection_size_y_validator" supplier="projection_size_y_supplier" placeholder="Size Y"/>
-        <label pos="10,70">Projection offset in blocks:</label>
+        <label pos="10,70">@Projection offset in blocks:</label>
         <textbox id="projection_offset_x" pos="10,90" size="70,30" consumer="projection_offset_x_consumer"
 				 validator="projection_offset_x_validator" supplier="projection_offset_x_supplier" placeholder="Offset X"/>
         <textbox id="projection_offset_y" pos="90,90" size="70,30" consumer="projection_offset_y_consumer"
 				 validator="projection_offset_y_validator" supplier="projection_offset_y_supplier" placeholder="Offset Y"/>
         <textbox id="projection_offset_z" pos="170,90" size="70,30" consumer="projection_offset_z_consumer"
 				 validator="projection_offset_z_validator" supplier="projection_offset_z_supplier" placeholder="Offset Z"/>
-        <label pos="10,130">Capture size in pixels:</label>
-		<checkbox id="same_size" pos="10,150" size="250,30" consumer="same_size_consumer">Same as projection size</checkbox>
+        <label pos="10,130">@Capture size in pixels:</label>
+		<checkbox id="same_size" pos="10,150" size="250,30" consumer="same_size_consumer">@Same as projection size</checkbox>
         <textbox id="capture_size_x" pos="10,190" size="110,30" consumer="capture_size_x_consumer" 
 				 validator="capture_size_x_validator" supplier="capture_size_x_supplier" placeholder="Size X"/>
         <textbox id="capture_size_y" pos="130,190" size="110,30" consumer="capture_size_y_consumer"
@@ -24,25 +24,25 @@
     <container color="#00000099" id="settings_2" scrollable="0" size="250,240" pos="280,30">
         <label id="refresh_rate_label" pos="10,10"/>
         <trackbar id="refresh_rate_trackbar" pos="10,30" size="230,30" min="1" max="60" consumer="fps_consumer" supplier="fps_supplier"/>
-        <checkbox pos="10,70" size="200,30" consumer="clear_on_stop_consumer" supplier="clear_on_stop_supplier">Clear on stop</checkbox>
+        <checkbox pos="10,70" size="250,30" consumer="clear_on_stop_consumer" supplier="clear_on_stop_supplier">@Clear on stop</checkbox>
         <button id="axis" pos="10,150" size="230,30" onclick="toggle_axis()"/>
         <button id="orientation" pos="10,110" size="230,30" onclick="toggle_orientation()"/>
-		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">Use RGB mode</checkbox>
+		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">@Use RGB mode</checkbox>
 	</container>
-	<panel pos="550,30" padding="10, 10, 10, 10" min-length="580" color="#00000099" scrollable="0" size="250, 580">
-		<checkbox id ="highlight_area_checkbox" consumer="highlight_area_consumer">Highlight area</checkbox>
+	<panel pos="550,30" padding="10, 10, 10, 10" min-length="580" color="#00000099" scrollable="0" size="300, 580">
+		<checkbox id ="highlight_area_checkbox" consumer="highlight_area_consumer">@Highlight area</checkbox>
 		<label id="stop_on_lag_label"></label>
 		<trackbar id="stop_on_lag_trackbar" min="50" max="510" step="10" consumer="stop_on_lag_consumer"></trackbar>
-		<label margin="0, 10, 0, 0">Experimental settings:</label>
-	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="Use ByteArray instead of table in network functions">Use ByteArray</checkbox>
-	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="Use chunkwise update method">Chunkwise update method</checkbox>
+		<label margin="0, 10, 0, 0">@Experimental settings:</label>
+	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="@Use ByteArray instead of table in network functions">@Use ByteArray</checkbox>
+	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="@Use chunkwise update method">@Chunkwise update method</checkbox>
 	</panel>
     <label pos="10,280" supplier="status_supplier"/>    
 	<label pos="10, 300" supplier="framerate_supplier"/>
-	<button id="additional_settings" pos="330, 280" size="200, 30" onclick="toggle_additional_settings()"/>
-    <button id="sync" pos="10,320" size="520,30" onclick="synchronize()">Synchronize</button>
-    <button id="main_button" pos="10,360" size="520,30" onclick="main_button_func()">Start</button>
-    <button id="clear" pos="10,400" size="520,30" onclick="clear_display()">Clear area</button>
-    <label pos="10,440">Logs:</label>
+	<button id="additional_settings" pos="280, 280" size="250, 30" onclick="toggle_additional_settings()"/>
+    <button id="sync" pos="10,320" size="520,30" onclick="synchronize()">@Synchronize</button>
+    <button id="main_button" pos="10,360" size="520,30" onclick="main_button_func()">@Start</button>
+    <button id="clear" pos="10,400" size="520,30" onclick="clear_display()">@Clear area</button>
+    <label pos="10,440">@Logs:</label>
     <panel id="logs" pos="10,460" size="520,150" max-length="150" min-length="150" supplier="log_message"/>
 </container>

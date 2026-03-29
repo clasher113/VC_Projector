@@ -32,8 +32,8 @@ function on_gui_render()
 
 	local anim_speed = 2000 -- pixels per second
 	local size = document["root"].size
-	if (show_additional_settings == true and size[1] < 810) then
-		size[1] = math.min(810, size[1] + anim_speed * time.delta())
+	if (show_additional_settings == true and size[1] < 860) then
+		size[1] = math.min(860, size[1] + anim_speed * time.delta())
 	end
 	if (show_additional_settings == false and size[1] > 540) then
 		size[1] = math.max(540, size[1] - anim_speed * time.delta())
@@ -48,10 +48,10 @@ function on_open()
 	if (single_time_init == false) then
 		single_time_init = true
 
-		document["orientation"].text = "Orientation: " .. orientations[config.orientation]
-		document["axis"].text = "Axis: " .. axes[config.axis]
+		document["orientation"].text = gui.str("Orientation", PACK_ID) .. ": " .. gui.str(orientations[config.orientation], PACK_ID)
+		document["axis"].text = gui.str("Axis", PACK_ID) .. ": " .. axes[config.axis]
 		if (not rgb_addon.is_loaded()) then
-			document["rgb_mode"].tooltip = "RGB addon not installed"
+			document["rgb_mode"].tooltip = gui.str("RGB addon not installed", PACK_ID)
 			document["rgb_mode"].tooltipDelay = 0
 		end
 		document["rgb_mode"].checked = config.rgb_mode
@@ -66,7 +66,7 @@ function on_open()
 		same_size_consumer(config.same_size)
 		stop_on_lag_consumer(config.stop_on_lag_duration)
 
-		document["settings_1"]:setInterval(1, on_gui_render)
+		document["root"]:setInterval(1, on_gui_render)
 		synchronizer.on_disconnect_callback = function()
 			if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 				stop()
@@ -77,8 +77,8 @@ function on_open()
 			local delta = time.delta() * 1000
 			if (enabled and delta > config.stop_on_lag_duration) then
 				stop()
-				log_message("Stopped due to lag " .. tostring(math.round(delta, 0)) .. "ms, limit " .. 
-					tostring(config.stop_on_lag_duration) .. "ms")
+				log_message(gui.str("Stopped due to lag", PACK_ID) .. " " .. tostring(math.round(delta, 0)) .. "ms, " .. 
+					gui.str("limit", PACK_ID) .. " " .. tostring(config.stop_on_lag_duration) .. "ms")
 				return true
 			end
 			return false
@@ -117,33 +117,33 @@ function log_message(string)
 end
 
 function status_supplier(string)
-	return "Status: " .. util.status_info[synchronizer.get_status()].string
+	return gui.str("Status", PACK_ID) .. ": " .. gui.str(util.status_info[synchronizer.get_status()].string, PACK_ID)
 end
 
 function stop()
 	synchronizer.set_status(util.synchronizer_status.READY)
-	document["main_button"].text = "Start"
+	document["main_button"].text = gui.str("Start", PACK_ID)
 	display.current_framerate = 0
 	if (config.clear_on_stop) then
 		display.clear(hud.get_player())
 	end
-	log_message("Capturing stopped")
+	log_message(gui.str("Capturing stopped", PACK_ID))
 	highlight.refresh()
     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
         local api = multiplayer.get_api()
-        api.events.send("projector", "capture_status", Bytearray( { 0 } ))
+        api.events.send(PACK_ID, "capture_status", Bytearray( { 0 } ))
     end
 end
 
 function start()
 	synchronizer.set_status(util.synchronizer_status.CAPTURING)
-	document["main_button"].text = "Stop"
-	log_message("Capturing started")
+	document["main_button"].text = gui.str("Stop", PACK_ID)
+	log_message(gui.str("Capturing started", PACK_ID))
 	config.write()
 	highlight.stop()
     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
         local api = multiplayer.get_api()
-        api.events.send("projector", "capture_status", Bytearray( { 1 } ))
+        api.events.send(PACK_ID, "capture_status", Bytearray( { 1 } ))
     end
 end
 
@@ -153,16 +153,16 @@ function main_button_func()
 	elseif (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
 		stop()
 	else
-		log_message("You must synchronize first")
+		log_message(gui.str("You must synchronize first", PACK_ID))
 	end
 end
 
 function synchronize()
 	if (synchronizer.get_status() == util.synchronizer_status.NOT_CONNECTED) then
-		log_message("Not connected")
+		log_message(gui.str("Not connected", PACK_ID))
 		return
 	end
-	log_message("Synchronization...")
+	log_message(gui.str("Synchronization", PACK_ID))
 	synchronizer.set_status(util.synchronizer_status.SYNCING)
 	config.write()
 end
@@ -172,7 +172,7 @@ function toggle_orientation()
 	if (config.orientation > #(orientations)) then 
 		config.orientation = 1
 	end
-	document["orientation"].text = "Orientation: " .. orientations[config.orientation]
+	document["orientation"].text = gui.str("Orientation", PACK_ID) .. ": " .. gui.str(orientations[config.orientation], PACK_ID)
 	highlight.refresh()
 end
 
@@ -181,7 +181,7 @@ function toggle_axis()
 	if (config.axis > #(axes)) then 
 		config.axis = 1
 	end
-	document["axis"].text = "Axis: " .. axes[config.axis]
+	document["axis"].text = gui.str("Axis", PACK_ID) .. ": " .. axes[config.axis]
 	highlight.refresh()
 end
 
@@ -193,7 +193,7 @@ function fps_consumer(string)
 end
 
 function fps_supplier()
-	document["refresh_rate_label"].text = "Projection refresh rate: " .. tostring(config.refresh_rate)
+	document["refresh_rate_label"].text = gui.str("Projection refresh rate", PACK_ID) .. ": " .. tostring(config.refresh_rate)
 	return config.refresh_rate
 end
 
@@ -201,7 +201,7 @@ function rgb_consumer(checked)
 	config.rgb_mode = checked
 	if (rgb_addon.is_loaded() == false and (synchronizer.get_status() == util.synchronizer_status.CONNECTED or 
 		synchronizer.get_status() == util.synchronizer_status.READY) and display.rgb_initialized == false) then
-		log_message("Initializing")
+		log_message(gui.str("Initializing", PACK_ID))
 		synchronizer.set_status(util.synchronizer_status.INIT)
 	end
 end
@@ -214,14 +214,14 @@ local function validate_textbox(input, min, max, textbox)
 	local number = tonumber(input)
 	textbox.tooltipDelay = 0
 	if (number == nil) then
-		textbox.tooltip = "Input must be a number"
+		textbox.tooltip = gui.str("Input must be a number", PACK_ID)
 		return false
 	end
 	if (number > max) then
-		textbox.tooltip = "Number too big. Possible maximum - " .. tostring(max)
+		textbox.tooltip = gui.str("Number too big. Possible maximum", PACK_ID) .. " - " .. tostring(max)
 		return false
 	elseif (number < min) then
-		textbox.tooltip = "Number too low. Required minimum - " .. tostring(min)
+		textbox.tooltip = gui.str("Number too low. Required minimum", PACK_ID) .. " - " .. tostring(min)
 		return false
 	end
 	textbox.tooltip = ""
@@ -366,12 +366,12 @@ function clear_on_stop_supplier()
 end
 
 function framerate_supplier()
-	return "Current framerate: " .. tostring(display.current_framerate)
+	return gui.str("Current framerate", PACK_ID) .. ": " .. tostring(display.current_framerate)
 end
 
 function toggle_additional_settings()
 	show_additional_settings = not show_additional_settings
-	document["additional_settings"].text = "Additional settings " .. (show_additional_settings and "<<" or ">>")
+	document["additional_settings"].text = gui.str("Additional settings", PACK_ID) .. (show_additional_settings and " <<" or " >>")
 end
 
 function use_bytearray_consumer(checked)
@@ -389,17 +389,17 @@ end
 
 function stop_on_lag_consumer(value)
 	local is_max_value = value == document["stop_on_lag_trackbar"].max
-	document["stop_on_lag_label"].text = "Stop on lag: " .. (is_max_value and "Disabled" or tostring(value) .. "ms")
+	document["stop_on_lag_label"].text = gui.str("Stop on lag", PACK_ID) .. ": " .. (is_max_value and gui.str("Disabled", PACK_ID) or tostring(value) .. "ms")
 	document["stop_on_lag_trackbar"].value = value
 	config.stop_on_lag_duration = value
 end
 
 function clear_display()
 	if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
-		log_message("Does it make sense while the projector is running?")
+		log_message(gui.str("Projector is running now", PACK_ID))
 	else
         config.write()
 		display.clear(hud.get_player())
-		log_message("Display cleaned")
+		log_message(gui.str("Display cleaned", PACK_ID))
 	end
 end

@@ -5,6 +5,9 @@ local util = require("projector:util")
 local highlight = require("projector:highlight")
 local multiplayer = require("projector:multiplayer")
 local rules = require("projector:rules")
+local locale_change_listener = require("projector:locale_change_listener")
+
+locale_change_listener.listen(PACK_ID .. ":" .. PACK_ID, PACK_ID .. ":layouts/projector.xml")
 
 function on_interact(x, y, z, player_id)
     if (multiplayer.get_side() == multiplayer.sides.CLIENT and multiplayer.logged_in == false) then
@@ -27,7 +30,8 @@ function on_interact(x, y, z, player_id)
     display.set_position(x, y, z, player_id)
     instance_limit.set_position(player_id, { x, y, z } )
     if (multiplayer.get_side() ~= multiplayer.sides.SERVER) then
-        hud.show_overlay("projector:projector")
+        locale_change_listener.check(PACK_ID .. ":" .. PACK_ID)
+        hud.show_overlay(PACK_ID .. ":" .. PACK_ID, false)
         highlight.refresh()
     end
     return true

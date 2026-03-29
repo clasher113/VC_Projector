@@ -271,7 +271,7 @@ function synchronizer.server_routine()
 	refresh_timer = math.fmod(refresh_timer - refresh_interval, refresh_interval)
 
     if (util.status_info[status].timeout and status_update_time + STATUS_TIMEOUT_DURATION < time.uptime()) then
-        table.insert(synchronizer.messages, util.status_info[status].string .. " timeout")
+        table.insert(synchronizer.messages, gui.str(util.status_info[status].string) .. " " .. gui.str("timeout", PACK_ID))
         if (status == util.synchronizer_status.INIT) then
             config.rgb_mode = false
         end
@@ -309,16 +309,16 @@ function synchronizer.server_routine()
             local sync_success = buffer:get_bool()
             if (sync_success == false) then
                 status = util.synchronizer_status.CONNECTED
-                table.insert(synchronizer.messages, "Synchronization error")
+                table.insert(synchronizer.messages, gui.str("Synchronization error", PACK_ID))
             else
                 status = util.synchronizer_status.READY
-                table.insert(synchronizer.messages, "Synchronization success")
+                table.insert(synchronizer.messages, gui.str("Synchronization success", PACK_ID))
             end
         end
         if (bit.band(bit_mask, util.packet_bitmask.CAPTURE) > 0) then
             local capture_success = buffer:get_bool()
             if (capture_success == false) then
-                table.insert(synchronizer.messages, "Capture error")
+                table.insert(synchronizer.messages, gui.str("Capture error", PACK_ID))
             elseif (status == util.synchronizer_status.CAPTURING) then
                 if (synchronizer.on_lag_callback ~= nil) then
                     if (synchronizer.on_lag_callback()) then
@@ -354,9 +354,9 @@ function synchronizer.server_routine()
                 local colors = buffer:get_bytes(colors_size)
                 rgb_addon.fetch_textures_color(colors)
                 display.rgb_initialized = true
-                table.insert(synchronizer.messages, "Initialization success")
+                table.insert(synchronizer.messages, gui.str("Initialization success", PACK_ID))
             else
-                table.insert(synchronizer.messages, "Initialization error")
+                table.insert(synchronizer.messages, gui.str("Initialization error", PACK_ID))
                 config.rgb_mode = false
             end
             status = util.synchronizer_status.CONNECTED
