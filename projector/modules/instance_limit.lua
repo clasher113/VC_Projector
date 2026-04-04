@@ -1,75 +1,49 @@
-local util = require("projector:util")
-
 local instance_limit = {}
 
 local database = {
     --[player_id] = {
-    --  positions = {}
+    --  entity_uids = {}
     --}
 }
-local projector_block_index = block.index("projector:projector")
+local projector_entity_id = entities.def_index("projector:projector_entity")
 local file_path = nil
 
-local function vec3_equal(v1, v2)
-    return v1[1] == v2[1] and v1[2] == v2[2] and v1[3] == v2[3]
-end
-
-local function is_exists(array, position)
-    for _, v in pairs(array) do
-        if (vec3_equal(v, position)) then
-            return true
-        end
-    end
-    return false
-end
-
-function instance_limit.set_position(player_id, new_position)
-    instance_limit.cleanup(player_id, new_position)
+function instance_limit.set_entity(player_id, new_entity_uid)
     if (database[player_id] == nil) then
         database[player_id] = {
-            positions = {}
+            entity_uids = {}
         }
+    else
+        for key, entity_uid in pairs(database[player_id].entity_uids) do
+            local entity = entities.get(entity_uid)
+
+            if (entity ~= nil and entity:def_index() == projector_entity_id and entity:get_uid() ~= new_entity_uid) then
+                entity:despawn()
+            end
+            database[player_id].entity_uids[key] = nil
+        end
     end
-    if (not is_exists(database[player_id].positions, new_position)) then
-        table.insert(database[player_id].positions, new_position)
+    if (not table.has(database[player_id].entity_uids)) then
+        table.insert(database[player_id].entity_uids, new_entity_uid)
     end
 end
 
-function instance_limit.cleanup(player_id, ignore_pos)
-	if (database[player_id] ~= nil) then
-        for key, position in pairs(database[player_id].positions) do
-            local block_id = block.get(position[1], position[2], position[3])
-            if (block_id == projector_block_index) then
-                local owner_pid = util.get_owner_pid(position[1], position[2], position[3])
-                if (owner_pid == player_id and (ignore_pos == nil or not vec3_equal(position, ignore_pos))) then
-                    block.destruct(position[1], position[2], position[3], player_id)
-                end
-            elseif (block_id ~= -1) then
-                database[player_id].positions[key] = nil
+function instance_limit.on_despawned(owner_pid, entity_uid)
+    if (database[owner_pid] ~= nil) then
+        for key, uid in pairs(database[owner_pid].entity_uids) do
+            if (uid == entity_uid) then
+                database[owner_pid].entity_uids[key] = nil
             end
         end
-	end
-    if (database[player_id] ~= nil and #database[player_id].positions == 0) then
-        database[player_id] = nil
-    end
-end
-
-function instance_limit.on_broken(x, y, z, player_id)
-    if (database[player_id] ~= nil) then
-        for key, position in pairs(database[player_id].positions) do
-            if (position[1] == x and position[2] == y and position[3] == z) then
-                database[player_id].positions[key] = nil
-            end
-        end
-        if (#database[player_id].positions == 0) then
-            database[player_id] = nil
+        if (#database[owner_pid].entity_uids == 0) then
+            database[owner_pid] = nil
         end
     end
 end
 
 function instance_limit.on_world_open()
     file_path = pack.data_file("projector", "instance_limit")
-    
+
 	if (file.isfile(file_path)) then
         local byte_array = file.read_bytes(file_path, false)
         if (#byte_array > 0) then
@@ -84,7 +58,9 @@ end
 function instance_limit.save()
     local temp = {}
     for k, v in pairs(database) do
-        temp[tostring(k)] = v
+        if (table.count_pairs(v) > 0) then
+            temp[tostring(k)] = v
+        end
     end
     file.write_bytes(file_path, bjson.tobytes(temp, false))
 end

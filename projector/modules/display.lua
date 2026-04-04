@@ -115,7 +115,7 @@ end
 function display.update_with_chunks(chunks, player_id)
 	update_framerate()
 
-    local player_config = config.get_player_config(player_id)
+	local player_config = config.get_player_config(player_id)
     if (player_config == nil) then return end
     local step = (player_config.rgb_mode == true and 2 or 1)
 	local get_block_func = (player_config.rgb_mode == true and get_rgb_block or get_mohochrome_block)
@@ -220,11 +220,11 @@ function display.clear(player_id)
 	framerate = 0
 end
 
-function display.set_position(x, y, z, player_id)
+function display.set_position(position, player_id)
     if (database[player_id] == nil) then
         database[player_id] = {}
     end
-    database[player_id].position = { x, y, z }
+    database[player_id].position = position
 end
 
 function display.get_position(player_id)

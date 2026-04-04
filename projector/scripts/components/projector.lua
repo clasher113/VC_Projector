@@ -4,6 +4,9 @@ local synchronizer = require("projector:synchronizer")
 local util = require("projector:util")
 local multiplayer = require("projector:multiplayer")
 local highlight = require("projector:highlight")
+local rules = require("projector:rules")
+local locale_change_listener = require("projector:locale_change_listener")
+local instance_limit = require("projector:instance_limit")
 
 local skeleton = entity.skeleton
 local transform = entity.transform
@@ -24,8 +27,40 @@ if (multiplayer.get_side() == multiplayer.sides.SERVER) then
     local api = multiplayer.get_api()
     text_id, TextObject = api.text3d.show(vec3.add(transform:get_pos(), { 0, 0.7, 0 } ), "Owner: " .. player.get_name(owner_pid), owner_text_preset)
 end
+entity.rigidbody:set_gravity_scale(0)
 
-function on_attacked(attacker, pid)
+function on_used(player_id)
+	if (multiplayer.get_side() == multiplayer.sides.CLIENT and multiplayer.logged_in == false) then
+        console.chat("Not logged in")
+        return
+    end
+	if (rules.get_rules(player_id).allow_use == false) then
+        if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+            console.chat("You are not permitted to use this block")
+        end
+        return
+    end
+	if (not owner_pid or owner_pid ~= player_id) then
+        if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+            console.chat("You are not owner")
+        end
+        return
+    end
+	local pos = transform:get_pos()
+	display.set_position({ math.floor(pos[1]), math.floor(pos[2]), math.floor(pos[3]) }, player_id)
+    instance_limit.set_entity(player_id, entity:get_uid())
+    if (multiplayer.get_side() ~= multiplayer.sides.SERVER) then
+        locale_change_listener.check("projector:projector")
+        hud.show_overlay("projector:projector", false)
+        highlight.refresh()
+    end
+end
+
+function on_attacked(attacker, player_id)
+	if (synchronizer.is_player_capturing(owner_pid)) then
+        return
+    end
+	instance_limit.on_despawned(owner_pid, entity:get_uid())
 	entity:despawn()
 end
 
@@ -82,12 +117,9 @@ function on_despawn()
     if (multiplayer.get_side() == multiplayer.sides.SERVER) then
         local api = multiplayer.get_api()
         api.text3d.hide(text_id)
+    elseif (owner_pid == hud.get_player()) then
+        highlight.stop()
     end
-	if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
-		if (owner_pid == hud.get_player()) then
-			highlight.stop()
-		end
-	end
 end
 
 function on_save()

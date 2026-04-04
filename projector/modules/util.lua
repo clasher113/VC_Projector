@@ -41,30 +41,6 @@ local update_method = {
 
 local BYTE_ORDER = "LE"
 
-local function get_block_entity(x, y, z)
-    local entities_arr = entities.get_all_in_box( { x, y, z }, { 1, 1, 1 } )
-    if (entities_arr ~= nil) then
-        for k,v in pairs(entities_arr) do
-            local entity = entities.get(v)
-            if (entity:def_name() == "projector:projector_entity") then
-                return entity
-            end
-        end
-    end
-    return nil
-end
-
-local function get_owner_pid(x, y, z)
-    local entity = get_block_entity(x, y, z)
-    if (entity) then
-        local component = entity:get_component("projector:projector")
-        if (component) then
-            return component:get_owner_pid()
-        end
-    end
-    return nil
-end
-
 return {
 	synchronizer_status = synchronizer_status,
 	status_info = status_info,
@@ -72,7 +48,5 @@ return {
 	orientation = orientation,
 	axis = axis,
 	update_method = update_method,
-	BYTE_ORDER = BYTE_ORDER,
-    get_block_entity = get_block_entity,
-    get_owner_pid = get_owner_pid
+	BYTE_ORDER = BYTE_ORDER
 }

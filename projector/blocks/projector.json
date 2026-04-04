@@ -1,7 +1,5 @@
 {
-  "model": "none",
-  "light-passing": true,
-  "sky-light-passing": true,
-  "hitbox": [ 0, 0, 0, 1, 1, 1 ],
-  "texture": "black5"
+  "model": "custom",
+  "model-name": "projector_preview",
+  "hitbox": [ 0.05, 0, 0.05, 0.9, 0.9, 0.9 ]
 }

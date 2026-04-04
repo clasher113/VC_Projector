@@ -76,7 +76,7 @@ end
 local function unpack_config(byte_array)
     local player_config = data_buffer(byte_array:slice(byte_array.size - CONFIG_SIZE + 1, CONFIG_SIZE), "LE")
     local player_id = player_config:get_int64()
-    display.set_position(player_config:get_int64(), player_config:get_int64(), player_config:get_int64(), player_id)
+    display.set_position( { player_config:get_int64(), player_config:get_int64(), player_config:get_int64() }, player_id)
     config.set_player_config( {
         resolution = { player_config:get_uint16(), player_config:get_uint16() },
         offset = { player_config:get_uint16(), player_config:get_uint16(), player_config:get_uint16() },
@@ -130,7 +130,7 @@ function synchronizer.initialize_events()
 
             api.events.echo("projector", "capture_status", bjson.tobytes( { [tostring(player_id)] = capturing } ))
         end)
-        events.on("server:player_ground_landing", function (Client)
+        events.on("server:on_player_ready", function (Client)
             if (#capturing_players > 0) then
                 local capturing = {}
                 for k, _ in pairs(capturing_players) do
