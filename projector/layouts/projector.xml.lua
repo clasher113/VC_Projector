@@ -65,6 +65,7 @@ function on_open()
 		toggle_additional_settings()
 		same_size_consumer(config.same_size)
 		stop_on_lag_consumer(config.stop_on_lag_duration)
+		multiplayer_buffer_size_consumer(config.multiplayer_buffer_size)
 
 		document["root"]:setInterval(1, on_gui_render)
 		synchronizer.on_disconnect_callback = function()
@@ -93,6 +94,11 @@ function on_open()
         if (#current_rules.allowed_axes == 1) then
             document["axis"].enabled = false
         end
+		if (multiplayer.get_side() == multiplayer.sides.SINGLEPLAYER) then
+			document["multiplayer_buffer_size_trackbar"].enabled = false
+			document["multiplayer_buffer_size_trackbar"].visible = false
+			document["multiplayer_buffer_size_label"].visible = false
+		end
 	end
 end
 
@@ -392,6 +398,12 @@ function stop_on_lag_consumer(value)
 	document["stop_on_lag_label"].text = gui.str("Stop on lag", PACK_ID) .. ": " .. (is_max_value and gui.str("Disabled", PACK_ID) or tostring(value) .. "ms")
 	document["stop_on_lag_trackbar"].value = value
 	config.stop_on_lag_duration = value
+end
+
+function multiplayer_buffer_size_consumer(value)
+	document["multiplayer_buffer_size_label"].text = gui.str("Multiplayer send buffer size", PACK_ID) .. ": " .. tostring(value)
+	document["multiplayer_buffer_size_trackbar"].value = value
+	config.multiplayer_buffer_size = value
 end
 
 function clear_display()

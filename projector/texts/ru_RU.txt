@@ -49,5 +49,7 @@ projector.Stop on lag=Остановить при задержке
 projector.Disabled=Отключено
 projector.Use chunkwise update method=Использовать метод обновления по частям
 projector.Use ByteArray instead of table in network functions=Использовать ByteArray вместо таблиц в сетевых функциях
+projector.Multiplayer send buffer size=Буфер отправки мультиплеера
+projector.How many frames can be sent to the server without receiving a response.\nThis value can be increased if a low frame rate is observed=Сколько кадров может быть отправлено на сервер без получения ответа.\nЗначение может быть увеличено, если наблюдается низкая частота кадров
 
 locale.name=ru_RU

@@ -23,7 +23,7 @@ local client
 local refresh_timer = 0.0
 local status_update_time = 0
 local wait_for_respond = false
-local send_frames = 3
+local multiplayer_frames_count = 0
 local status = util.synchronizer_status.NOT_CONNECTED
 local capturing_players = {}
 
@@ -149,7 +149,9 @@ function synchronizer.initialize_events()
         end)
     elseif (multiplayer.get_side() == multiplayer.sides.CLIENT) then
         api.events.on("projector", "next_frame", function()
-            send_frames = send_frames + 1
+            if (multiplayer_frames_count > 0) then
+                multiplayer_frames_count = multiplayer_frames_count - 1
+            end
         end)
         api.events.on("projector", "receive_pixels", function(byte_array)
             local player_id = unpack_config(byte_array)
@@ -332,7 +334,7 @@ function synchronizer.server_routine()
                     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
                         local api = multiplayer.get_api()
                         api.events.send("projector", "send_pixels", compression.encode(pixels))
-                        send_frames = send_frames - 1
+                        multiplayer_frames_count = multiplayer_frames_count + 1
                     end
                     display.update_with_pixels(pixels, hud.get_player())
                 elseif (update_method == util.update_method.CHUNKS) then
@@ -341,7 +343,7 @@ function synchronizer.server_routine()
                     if (multiplayer.get_side() == multiplayer.sides.CLIENT) then
                         local api = multiplayer.get_api()
                         api.events.send("projector", "send_chunks", compression.encode(chunks))
-                        send_frames = send_frames - 1
+                        multiplayer_frames_count = multiplayer_frames_count + 1
                     end
                     display.update_with_chunks(chunks, hud.get_player())
                 end
@@ -363,7 +365,7 @@ function synchronizer.server_routine()
         end
     end
 
-    if (not wait_for_respond and send_frames > 1) then
+    if (not wait_for_respond and multiplayer_frames_count < config.multiplayer_buffer_size) then
         local out_buffer = data_buffer(nil, util.BYTE_ORDER, config.use_bytearray)
 
         local bit_mask = util.packet_bitmask.PING_PONG

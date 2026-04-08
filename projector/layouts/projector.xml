@@ -36,6 +36,8 @@
 		<label margin="0, 10, 0, 0">@Experimental settings:</label>
 	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="@Use ByteArray instead of table in network functions">@Use ByteArray</checkbox>
 	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="@Use chunkwise update method">@Chunkwise update method</checkbox>
+        <label id="multiplayer_buffer_size_label"></label>
+		<trackbar id="multiplayer_buffer_size_trackbar" min="5" max="15" step="1" consumer="multiplayer_buffer_size_consumer" tooltip="@How many frames can be sent to the server without receiving a response.\nThis value can be increased if a low frame rate is observed"></trackbar>
 	</panel>
     <label pos="10,280" supplier="status_supplier"/>    
 	<label pos="10, 300" supplier="framerate_supplier"/>

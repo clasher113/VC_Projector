@@ -55,6 +55,7 @@ function display.update_with_pixels(pixels, player_id)
     if (player_config == nil) then return end
 	local step = (player_config.rgb_mode == true and 2 or 1)
 	local get_block_func = (player_config.rgb_mode == true and get_rgb_block or get_mohochrome_block)
+	local set_block_func = (multiplayer.get_side() == multiplayer.sides.SERVER and multiplayer.get_api().sandbox.block.unsynced_set or block.set)
 	local start_pos = vec3.add(database[player_id].position, player_config.offset)
 	local i = 1
 
@@ -66,7 +67,7 @@ function display.update_with_pixels(pixels, player_id)
 				for y = start_pos[2], end_pos[2] do 
 					local block_id = get_block_func(pixels, i)
 					if (block_id ~= BLOCK_ID_PREVIOUS) then
-						block.set(x, y, start_pos[3], block_id, 0, true)
+						set_block_func(x, y, start_pos[3], block_id, 0, true)
 					end
 					i = i + step
 				end
@@ -76,7 +77,7 @@ function display.update_with_pixels(pixels, player_id)
 				for y = start_pos[2], end_pos[2] do 
 					local block_id = get_block_func(pixels, i)
 					if (block_id ~= BLOCK_ID_PREVIOUS) then
-						block.set(start_pos[1], y, z, block_id, 0, true)
+						set_block_func(start_pos[1], y, z, block_id, 0, true)
 					end
 					i = i + step
 				end
@@ -91,7 +92,7 @@ function display.update_with_pixels(pixels, player_id)
 				for z = end_pos[2], start_pos[3], -1 do
 					local block_id = get_block_func(pixels, i)
 					if (block_id ~= BLOCK_ID_PREVIOUS) then
-						block.set(x, start_pos[2], z, block_id, 0, true)
+						set_block_func(x, start_pos[2], z, block_id, 0, true)
 					end
 					i = i + step
 				end
@@ -102,7 +103,7 @@ function display.update_with_pixels(pixels, player_id)
 				for x = start_pos[1], end_pos[1] do
 					local block_id = get_block_func(pixels, i)
 					if (block_id ~= BLOCK_ID_PREVIOUS) then
-						block.set(x, start_pos[2], z, block_id, 0, true)
+						set_block_func(x, start_pos[2], z, block_id, 0, true)
 					end
 					i = i + step
 				end
@@ -119,6 +120,7 @@ function display.update_with_chunks(chunks, player_id)
     if (player_config == nil) then return end
     local step = (player_config.rgb_mode == true and 2 or 1)
 	local get_block_func = (player_config.rgb_mode == true and get_rgb_block or get_mohochrome_block)
+	local set_block_func = (multiplayer.get_side() == multiplayer.sides.SERVER and multiplayer.get_api().sandbox.block.unsynced_set or block.set)
 	local start_pos = vec3.add(database[player_id].position, player_config.offset)
 	local chunks_count = {
 		math.ceil(player_config.resolution[1] / CHUNK_SIZE[1]),
@@ -151,7 +153,7 @@ function display.update_with_chunks(chunks, player_id)
 						for y = chunk_pos[2], chunk_pos[2] + chunk_size[2] do 
 							local block_id = get_block_func(chunks, i)
 							if (block_id ~= BLOCK_ID_PREVIOUS) then
-								block.set(x, y, start_pos[3], block_id, 0, true)
+								set_block_func(x, y, start_pos[3], block_id, 0, true)
 							end
 							i = i + step
 						end
@@ -161,7 +163,7 @@ function display.update_with_chunks(chunks, player_id)
 						for y = chunk_pos[2], chunk_pos[2] + chunk_size[2] do 
 							local block_id = get_block_func(chunks, i)
 							if (block_id ~= BLOCK_ID_PREVIOUS) then
-								block.set(start_pos[1], y, z, block_id, 0, true)
+								set_block_func(start_pos[1], y, z, block_id, 0, true)
 							end
 							i = i + step
 						end
@@ -178,7 +180,7 @@ function display.update_with_chunks(chunks, player_id)
 						for z = start_pos[3] + CHUNK_SIZE[2] * _cy + chunk_size[2] - offset, start_pos[3] + CHUNK_SIZE[2] * _cy - offset, -1 do
 							local block_id = get_block_func(chunks, i)
 							if (block_id ~= BLOCK_ID_PREVIOUS) then
-								block.set(x, start_pos[2], z, block_id, 0, true)
+								set_block_func(x, start_pos[2], z, block_id, 0, true)
 							end
 							i = i + step
 						end
@@ -188,7 +190,7 @@ function display.update_with_chunks(chunks, player_id)
 						for x = start_pos[1] + CHUNK_SIZE[2] * cy, start_pos[1] + CHUNK_SIZE[2] * cy + chunk_size[2], 1 do
 							local block_id = get_block_func(chunks, i)
 							if (block_id ~= BLOCK_ID_PREVIOUS) then
-								block.set(x, start_pos[2], z, block_id, 0, true)
+								set_block_func(x, start_pos[2], z, block_id, 0, true)
 							end
 							i = i + step
 						end

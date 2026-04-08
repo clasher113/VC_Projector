@@ -9,6 +9,7 @@ local config = {
 	orientation = 1,
 	axis = 1,
 	stop_on_lag_duration = 250,
+    multiplayer_buffer_size = 10,
 	same_size = true,
 	rgb_mode = false,
 	clear_on_stop = true,
