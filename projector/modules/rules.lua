@@ -75,7 +75,7 @@ local function parse(dst, src)
     end
 end
 
-function rules.on_world_open()
+function rules.on_world_open(rgb_initialized)
     role_rules[ROLE_GLOBAL_STR] = table.deep_copy(current_rules)
 
     local file_path = pack.shared_file("projector", "rules.json")
@@ -91,6 +91,12 @@ function rules.on_world_open()
             end
         end
     end
+
+    if (rgb_initialized == false) then
+        for _, _rules in pairs(role_rules) do
+            _rules.allow_rgb_mode = false
+        end
+    end
 end
 
 function rules.get_rules(player_id)
@@ -104,8 +110,8 @@ function rules.get_rules(player_id)
 end
 
 function rules.apply_rules(new_rules)
-    for k, v in pairs(new_rules) do
-        current_rules[k] = v
+    for k, v in pairs(current_rules) do
+        current_rules[k] = new_rules[k]
     end
 end
 

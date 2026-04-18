@@ -15,7 +15,12 @@ local config = {
 	clear_on_stop = true,
 	use_bytearray = true,
 	highlight_area = true,
-	use_chunks = true
+	use_chunks = true,
+    allow_non_obstacle_blocks = false,
+    allow_translucent_blocks = true,
+    allow_hidden_blocks = true,
+    allow_emissive_blocks = true,
+    allow_shadeless_blocks = true
 }
 
 local database = {}
@@ -23,9 +28,9 @@ local file_path = nil
 
 local function deserialize(bytes)
     local temp = bjson.frombytes(bytes)
-    for k, v in pairs(config) do
+    for k, v in pairs(temp) do
         if (type(v) ~= "function") then
-            if (temp[k] == nil or type(v) ~= type(temp[k]) or (type(v) == "table" and #v ~= #temp[k])) then
+            if (type(v) ~= type(temp[k]) or (type(v) == "table" and #v ~= #temp[k])) then
                 return nil
             end
         end
@@ -61,7 +66,29 @@ function config.on_world_open()
             end
         end
     elseif (multiplayer.get_side() == multiplayer.sides.SERVER) then
-        file_path = pack.data_file("projector", "config")
+        local config_file = pack.shared_file("projector", "server_config.json")
+
+        if (file.isfile(config_file)) then
+            local server_config = json.parse(file.read(config_file))
+
+            if (type(server_config.allow_non_obstacle_blocks) == type(config.allow_non_obstacle_blocks)) then
+                config.allow_non_obstacle_blocks = server_config.allow_non_obstacle_blocks
+            end
+            if (type(server_config.allow_translucent_blocks) == type(config.allow_translucent_blocks)) then
+                config.allow_translucent_blocks = server_config.allow_translucent_blocks
+            end
+            if (type(server_config.allow_hidden_blocks) == type(config.allow_hidden_blocks)) then
+                config.allow_hidden_blocks = server_config.allow_hidden_blocks
+            end
+            if (type(server_config.allow_emissive_blocks) == type(config.allow_emissive_blocks)) then
+                config.allow_emissive_blocks = server_config.allow_emissive_blocks
+            end
+            if (type(server_config.allow_shadeless_blocks) == type(config.allow_shadeless_blocks)) then
+                config.allow_shadeless_blocks = server_config.allow_shadeless_blocks
+            end
+        end
+
+        file_path = pack.data_file("projector", "players_config")
 
         if (file.isfile(file_path)) then
             local byte_array = file.read_bytes(file_path, false)
@@ -85,7 +112,7 @@ function config.on_world_open()
             player_config.offset[3] = math.clamp(player_config.offset[3], player_rules.offset_min[3], player_rules.offset_max[3])
             player_config.refresh_rate = math.clamp(player_config.refresh_rate, 1, player_rules.fps_max)
             if (player_rules.allow_rgb_mode == false) then
-                player_rules.rgb_mode = false
+                player_config.rgb_mode = false
             end
             if (#player_rules.allowed_orientations == 1) then
                 player_config.orientation = player_rules.allowed_orientations[1]
@@ -93,6 +120,11 @@ function config.on_world_open()
             if (#player_rules.allowed_axes == 1) then
                 player_config.axis = player_rules.allowed_axes[1]
             end
+            player_config.allow_non_obstacle_blocks = config.allow_non_obstacle_blocks
+            player_config.allow_translucent_blocks = config.allow_translucent_blocks
+            player_config.allow_hidden_blocks = config.allow_hidden_blocks
+            player_config.allow_emissive_blocks = config.allow_emissive_blocks
+            player_config.allow_shadeless_blocks = config.allow_shadeless_blocks
             api.events.tell("projector", "config_request", Client, serialize(player_config))
         end)
         api.events.on("projector", "config_send", function(Client, bytes)
@@ -118,6 +150,7 @@ function config.on_world_open()
         end)
     elseif (multiplayer.get_side() == multiplayer.sides.CLIENT) then
         local api = multiplayer.get_api()
+
         api.events.on("projector", "config_request", function(bytes)
             local temp = deserialize(bytes)
             if temp == nil then
@@ -126,6 +159,7 @@ function config.on_world_open()
                 for k, v in pairs(temp) do
                     config[k] = v
                 end
+                require("projector:rgb_addon").initialize()
             end
         end)
 

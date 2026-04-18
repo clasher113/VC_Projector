@@ -8,8 +8,7 @@ local BLOCK_ID_PREVIOUS = -1
 local CHUNK_SIZE = { 16, 16 }
 
 local display = {
-	current_framerate = 0,
-	rgb_initialized = false
+	current_framerate = 0
 }
 
 local database = {

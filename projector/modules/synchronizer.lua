@@ -2,7 +2,6 @@ local bit_converter = require("core:bit_converter")
 local data_buffer = require("core:data_buffer")
 local config = require("projector:config")
 local display = require("projector:display")
-local rgb_addon = require("projector:rgb_addon")
 local util = require("projector:util")
 local multiplayer = require("projector:multiplayer")
 local rules = require("projector:rules")
@@ -349,20 +348,6 @@ function synchronizer.server_routine()
                 end
             end
         end
-        if (bit.band(bit_mask, util.packet_bitmask.INIT) > 0) then
-            local init_success = buffer:get_bool()
-            if (init_success) then
-                local colors_size = buffer:get_uint32()
-                local colors = buffer:get_bytes(colors_size)
-                rgb_addon.fetch_textures_color(colors)
-                display.rgb_initialized = true
-                table.insert(synchronizer.messages, gui.str("Initialization success", PACK_ID))
-            else
-                table.insert(synchronizer.messages, gui.str("Initialization error", PACK_ID))
-                config.rgb_mode = false
-            end
-            status = util.synchronizer_status.CONNECTED
-        end
     end
 
     if (not wait_for_respond and multiplayer_frames_count < config.multiplayer_buffer_size) then
@@ -382,11 +367,6 @@ function synchronizer.server_routine()
             out_buffer:put_bool(true)
             out_buffer:put_bool(config.rgb_mode)
             out_buffer:put_uint16(config.use_chunks and util.update_method.CHUNKS or util.update_method.PIXELS)
-        elseif (status == util.synchronizer_status.INIT) then
-            bit_mask = bit.bor(bit_mask, util.packet_bitmask.INIT)
-            local texture_data = rgb_addon.get_textures_data()
-            out_buffer:put_uint32(texture_data:size())
-            out_buffer:put_bytes(texture_data:get_bytes())
         end
         out_buffer:set_position(1)
         out_buffer:put_uint32(bit_mask)

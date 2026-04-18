@@ -39,9 +39,6 @@ function on_gui_render()
 		size[1] = math.max(540, size[1] - anim_speed * time.delta())
 	end
 	document["root"].size = size
-	if (rgb_addon.is_loaded() == false and config.rgb_mode and display.rgb_initialized == false) then
-		rgb_consumer(true)
-	end
 end
 
 function on_open()
@@ -54,14 +51,18 @@ function on_open()
 			document["rgb_mode"].tooltip = gui.str("RGB addon not installed", PACK_ID)
 			document["rgb_mode"].tooltipDelay = 0
 		end
-		document["rgb_mode"].checked = config.rgb_mode
-		document["same_size"].checked = config.same_size
+		document["allow_non_obstacle_blocks_checkbox"].checked = config.allow_non_obstacle_blocks
+		document["allow_translucent_blocks_checkbox"].checked = config.allow_translucent_blocks
+		document["allow_hidden_blocks_checkbox"].checked = config.allow_hidden_blocks
+		document["allow_emissive_blocks_checkbox"].checked = config.allow_emissive_blocks
+		document["allow_shadeless_blocks_checkbox"].checked = config.allow_shadeless_blocks
         if (config.same_size) then
             config.capture_size = table.copy(config.resolution)
         end
 		document["use_bytearray"].checked = config.use_bytearray
 		document["use_chunks"].checked = config.use_chunks
 		document["highlight_area_checkbox"].checked = config.highlight_area
+		rgb_consumer(config.rgb_mode)
 		toggle_additional_settings()
 		same_size_consumer(config.same_size)
 		stop_on_lag_consumer(config.stop_on_lag_duration)
@@ -95,9 +96,16 @@ function on_open()
             document["axis"].enabled = false
         end
 		if (multiplayer.get_side() == multiplayer.sides.SINGLEPLAYER) then
-			document["multiplayer_buffer_size_trackbar"].enabled = false
-			document["multiplayer_buffer_size_trackbar"].visible = false
-			document["multiplayer_buffer_size_label"].visible = false
+			document["multiplayer_buffer_size_trackbar"]:destruct()
+			document["multiplayer_buffer_size_label"]:destruct()
+		end
+		if (rgb_addon.is_loaded() or multiplayer.get_side() == multiplayer.sides.CLIENT) then
+			document["rgb_mode_settings_label"]:destruct()
+			document["allow_non_obstacle_blocks_checkbox"]:destruct()
+			document["allow_translucent_blocks_checkbox"]:destruct()
+			document["allow_hidden_blocks_checkbox"]:destruct()
+			document["allow_emissive_blocks_checkbox"]:destruct()
+			document["allow_shadeless_blocks_checkbox"]:destruct()
 		end
 	end
 end
@@ -205,11 +213,7 @@ end
 
 function rgb_consumer(checked)
 	config.rgb_mode = checked
-	if (rgb_addon.is_loaded() == false and (synchronizer.get_status() == util.synchronizer_status.CONNECTED or 
-		synchronizer.get_status() == util.synchronizer_status.READY) and display.rgb_initialized == false) then
-		log_message(gui.str("Initializing", PACK_ID))
-		synchronizer.set_status(util.synchronizer_status.INIT)
-	end
+	document["rgb_mode"].checked = config.rgb_mode
 end
 
 function rgb_supplier()
@@ -354,6 +358,7 @@ end
 
 function same_size_consumer(checked)
 	config.same_size = checked
+	document["same_size"].checked = config.same_size
 	document["capture_size_x"].enabled = not checked
 	document["capture_size_y"].enabled = not checked
 	if (checked) then
@@ -404,6 +409,31 @@ function multiplayer_buffer_size_consumer(value)
 	document["multiplayer_buffer_size_label"].text = gui.str("Multiplayer send buffer size", PACK_ID) .. ": " .. tostring(value)
 	document["multiplayer_buffer_size_trackbar"].value = value
 	config.multiplayer_buffer_size = value
+end
+
+function allow_non_obstacle_blocks_consumer(flag)
+	config.allow_non_obstacle_blocks = flag
+	rgb_addon.initialize()
+end
+
+function allow_translucent_blocks_consumer(flag)
+	config.allow_translucent_blocks = flag
+	rgb_addon.initialize()
+end
+
+function allow_hidden_blocks_consumer(flag)
+	config.allow_hidden_blocks = flag
+	rgb_addon.initialize()
+end
+
+function allow_emissive_blocks_consumer(flag)
+	config.allow_emissive_blocks = flag
+	rgb_addon.initialize()
+end
+
+function allow_shadeless_blocks_consumer(flag)
+	config.allow_shadeless_blocks = flag
+	rgb_addon.initialize()
 end
 
 function clear_display()

@@ -36,8 +36,14 @@
 		<label margin="0, 10, 0, 0">@Experimental settings:</label>
 	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="@Use ByteArray instead of table in network functions">@Use ByteArray</checkbox>
 	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="@Use chunkwise update method">@Chunkwise update method</checkbox>
-        <label id="multiplayer_buffer_size_label"></label>
+        <label id="multiplayer_buffer_size_label" margin="0, 10, 0, 0"></label>
 		<trackbar id="multiplayer_buffer_size_trackbar" min="5" max="15" step="1" consumer="multiplayer_buffer_size_consumer" tooltip="@How many frames can be sent to the server without receiving a response.\nThis value can be increased if a low frame rate is observed"></trackbar>
+        <label id="rgb_mode_settings_label" margin="0, 10, 0, 0">@RGB mode settings:</label>
+        <checkbox id="allow_non_obstacle_blocks_checkbox" consumer="allow_non_obstacle_blocks_consumer">@Allow non-obstacle blocks</checkbox>
+        <checkbox id="allow_translucent_blocks_checkbox" consumer="allow_translucent_blocks_consumer">@Allow translucent blocks</checkbox>
+        <checkbox id="allow_hidden_blocks_checkbox" consumer="allow_hidden_blocks_consumer">@Allow hidden blocks</checkbox>
+        <checkbox id="allow_emissive_blocks_checkbox" consumer="allow_emissive_blocks_consumer">@Allow emissive blocks</checkbox>
+        <checkbox id="allow_shadeless_blocks_checkbox" consumer="allow_shadeless_blocks_consumer">@Allow shadeless blocks</checkbox>
 	</panel>
     <label pos="10,280" supplier="status_supplier"/>    
 	<label pos="10, 300" supplier="framerate_supplier"/>

@@ -11,9 +11,9 @@ local instance_limit = require("projector:instance_limit")
 local skeleton = entity.skeleton
 local transform = entity.transform
 
-local projector_bone_index = skeleton:index("projector")
-local disk_1_bone_index = skeleton:index("disk_1")
-local disk_2_bone_index = skeleton:index("disk_2")
+local projector_bone_index = 1
+local disk_1_bone_index = 2
+local disk_2_bone_index = 3
 local owner_text_preset = {
     display = "y_free_billboard",
     scale = 0.01,
