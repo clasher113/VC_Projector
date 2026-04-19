@@ -19,15 +19,10 @@ local api = nil
 function multiplayer.on_world_open()
     local m = _G["$Multiplayer"]
     if (m) then
+        api = require(string.format("%s:api/%s/api", m.pack_id, m.api_references.Neutron.latest) )[m.side]
+
         if (m.side == "server") then
             side = multiplayer.sides.SERVER
-        elseif (m.side == "client") then
-            side = multiplayer.sides.CLIENT
-        end
-    end
-    if (multiplayer.is_multiplayer()) then
-        if (side == multiplayer.sides.SERVER) then
-            api = require(string.format("%s:api/%s/api", m.pack_id, m.api_references.Neutron.latest) )[m.side]
 
             api.entities.register("projector:projector_entity",{
                 standard_fields = {
@@ -55,16 +50,13 @@ function multiplayer.on_world_open()
                     }
                 }
 	        })
-        elseif (side == multiplayer.sides.CLIENT) then
-            api = require(string.format("%s:api/%s/api", m.pack_id, m.api_references.Neutron.latest) )[m.side]
+        elseif (m.side == "client") then
+            side = multiplayer.sides.CLIENT
         end
-
         debug.log("Projector running in multiplayer mode. Side: " .. sides_info[side].name)
     end
-end
 
-function multiplayer.is_multiplayer()
-    return side ~= multiplayer.sides.SINGLEPLAYER
+    return api, side
 end
 
 function multiplayer.get_side()

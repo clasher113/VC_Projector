@@ -1,5 +1,4 @@
 local config = require("projector:config")
-local multiplayer = require("projector:multiplayer")
 local libpng = nil
 
 local rgb_addon = {
@@ -27,7 +26,7 @@ local function image_get_pixel(image, x, y, server_side)
 	return pixel
 end
 
-function rgb_addon.on_world_open()
+function rgb_addon.on_world_open(is_server_side)
 	local result = true
 	if (pack.is_installed(RGB_ADDON_ID)) then
 		debug.log("Projector: RGB addon found, initializing.")
@@ -36,11 +35,11 @@ function rgb_addon.on_world_open()
 		end
 		is_loaded = true
 	else
-		if (multiplayer.get_side() == multiplayer.sides.SERVER and pack.is_installed(LIBPNG_ID)) then
+		if (is_server_side and pack.is_installed(LIBPNG_ID)) then
 			libpng = require(LIBPNG_ID .. ":image")
 		end
 		debug.log("Projector: RGB addon not installed. Initializing without RGB addon.")
-		result = rgb_addon.initialize()
+		result = rgb_addon.initialize(is_server_side)
 	end
 	if (result == true) then
 		debug.log("Projector: RGB mode successfully initialized.")
@@ -50,15 +49,14 @@ function rgb_addon.on_world_open()
 	return result
 end
 
-function rgb_addon.initialize()
+function rgb_addon.initialize(is_server_side)
 	rgb_addon.blocks_indices = {}
 
 	local blocks_textures = {}
 	local all_textures = {}
     local textures_paths = {}
-	local server_side = multiplayer.get_side() == multiplayer.sides.SERVER
 
-	if (server_side) then
+	if (is_server_side) then
 		if (libpng == nil) then
 			debug.error("Projector: libpng not installed. RGB mode will not work.")
 			return false
@@ -123,7 +121,7 @@ function rgb_addon.initialize()
 
 				local image = nil
 
-				if (server_side) then
+				if (is_server_side) then
 					image = libpng.from_png(textures_paths[texture_name] or textures_paths["notfound"])
 				else
 					image = assets.to_canvas("blocks:" .. texture_name)
@@ -131,7 +129,7 @@ function rgb_addon.initialize()
 
 				for x = 0, image.width - 1 do
 					for y = 0, image.height - 1 do
-						local pixel = image_get_pixel(image, x, y, server_side)
+						local pixel = image_get_pixel(image, x, y, is_server_side)
 						local alpha = pixel[4]
 
 						if (config.allow_translucent_blocks == false) then

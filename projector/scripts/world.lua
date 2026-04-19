@@ -8,15 +8,15 @@ local multiplayer = require("projector:multiplayer")
 local rules = require("projector:rules")
 
 function on_world_open()
-    multiplayer.on_world_open()
+    local api, side = multiplayer.on_world_open()
     config.on_world_open()
-	local rgb_initialized = rgb_addon.on_world_open()
+	local rgb_initialized = rgb_addon.on_world_open(side == multiplayer.sides.SERVER)
 	display.on_world_open()
 	instance_limit.on_world_open()
-    if (multiplayer.get_side() == multiplayer.sides.SERVER) then
+    if (side == multiplayer.sides.SERVER) then
         rules.on_world_open(rgb_initialized)
     end
-    if (multiplayer.get_side() ~= multiplayer.sides.SERVER) then
+    if (side ~= multiplayer.sides.SERVER) then
         synchronizer.start_server()
     end
     synchronizer.initialize_events()

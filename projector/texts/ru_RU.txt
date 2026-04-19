@@ -21,6 +21,7 @@ projector.Projection refresh rate=Частота кадров проекции
 projector.Status=Статус
 projector.Waiting for connection=Ожидание подключения
 projector.Connected=Подключен
+projector.Not connected=Не подключен
 projector.Synchronization=Синхронизация
 projector.Ready=Готов
 projector.Capturing=Захват
@@ -57,5 +58,6 @@ projector.Allow translucent blocks=Разрешить полупрозрачны
 projector.Allow hidden blocks=Разрешить скрытые блоки
 projector.Allow emissive blocks=Разрешить светящиеся блоки
 projector.Allow shadeless blocks=Разрешить блоки без освещения
+projector.Stop the projector if the frame time has\nbeen greater than this value for 3 seconds=Остановить проектор, если время кадра было\nвыше этого значения на протяжении 3-х секунд
 
 locale.name=ru_RU

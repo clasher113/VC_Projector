@@ -11,7 +11,7 @@ local status_info = {
 	[synchronizer_status.CONNECTED] = { string = "Connected", gui_enabled = true, timeout = false },
 	[synchronizer_status.SYNCING] = { string = "Synchronization", gui_enabled = false, timeout = true },
 	[synchronizer_status.READY] = { string = "Ready", gui_enabled = true, timeout = false },
-	[synchronizer_status.CAPTURING] = { string = "Capturing", gui_enabled = false, timeout = false },
+	[synchronizer_status.CAPTURING] = { string = "Capturing", gui_enabled = false, timeout = false }
 }
 
 local packet_bitmask = {
@@ -38,6 +38,10 @@ local update_method = {
 
 local BYTE_ORDER = "LE"
 
+function get_gui()
+	return gui.get_env("projector:projector")
+end
+
 return {
 	synchronizer_status = synchronizer_status,
 	status_info = status_info,
@@ -45,5 +49,6 @@ return {
 	orientation = orientation,
 	axis = axis,
 	update_method = update_method,
-	BYTE_ORDER = BYTE_ORDER
+	BYTE_ORDER = BYTE_ORDER,
+	get_gui = get_gui
 }

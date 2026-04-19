@@ -23,16 +23,16 @@
     </container>
     <container color="#00000099" id="settings_2" scrollable="0" size="250,240" pos="280,30">
         <label id="refresh_rate_label" pos="10,10"/>
-        <trackbar id="refresh_rate_trackbar" pos="10,30" size="230,30" min="1" max="60" consumer="fps_consumer" supplier="fps_supplier"/>
-        <checkbox pos="10,70" size="250,30" consumer="clear_on_stop_consumer" supplier="clear_on_stop_supplier">@Clear on stop</checkbox>
+        <trackbar id="refresh_rate_trackbar" pos="10,30" size="230,30" min="1" max="60" consumer="fps_consumer"/>
+        <checkbox id="clear_on_stop_checkbox" pos="10,70" size="250,30" consumer="clear_on_stop_consumer">@Clear on stop</checkbox>
         <button id="axis" pos="10,150" size="230,30" onclick="toggle_axis()"/>
         <button id="orientation" pos="10,110" size="230,30" onclick="toggle_orientation()"/>
-		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer" supplier="rgb_supplier">@Use RGB mode</checkbox>
+		<checkbox id="rgb_mode" pos="10,190" size="250,30" consumer="rgb_consumer">@Use RGB mode</checkbox>
 	</container>
 	<panel pos="550,30" padding="10, 10, 10, 10" min-length="580" color="#00000099" scrollable="0" size="300, 580">
 		<checkbox id ="highlight_area_checkbox" consumer="highlight_area_consumer">@Highlight area</checkbox>
 		<label id="stop_on_lag_label"></label>
-		<trackbar id="stop_on_lag_trackbar" min="50" max="510" step="10" consumer="stop_on_lag_consumer"></trackbar>
+		<trackbar id="stop_on_lag_trackbar" min="50" max="510" step="10" consumer="stop_on_lag_consumer" tooltip="@Stop the projector if the frame time has\nbeen greater than this value for 3 seconds"></trackbar>
 		<label margin="0, 10, 0, 0">@Experimental settings:</label>
 	    <checkbox id="use_bytearray" consumer="use_bytearray_consumer" tooltip="@Use ByteArray instead of table in network functions">@Use ByteArray</checkbox>
 	    <checkbox id="use_chunks" consumer="use_chunks_consumer" tooltip="@Use chunkwise update method">@Chunkwise update method</checkbox>
@@ -45,12 +45,12 @@
         <checkbox id="allow_emissive_blocks_checkbox" consumer="allow_emissive_blocks_consumer">@Allow emissive blocks</checkbox>
         <checkbox id="allow_shadeless_blocks_checkbox" consumer="allow_shadeless_blocks_consumer">@Allow shadeless blocks</checkbox>
 	</panel>
-    <label pos="10,280" supplier="status_supplier"/>    
-	<label pos="10, 300" supplier="framerate_supplier"/>
+    <label id="status_label" pos="10,280"/>    
+	<label id="framerate_label" pos="10, 300"/>
 	<button id="additional_settings" pos="280, 280" size="250, 30" onclick="toggle_additional_settings()"/>
     <button id="sync" pos="10,320" size="520,30" onclick="synchronize()">@Synchronize</button>
     <button id="main_button" pos="10,360" size="520,30" onclick="main_button_func()">@Start</button>
     <button id="clear" pos="10,400" size="520,30" onclick="clear_display()">@Clear area</button>
     <label pos="10,440">@Logs:</label>
-    <panel id="logs" pos="10,460" size="520,150" max-length="150" min-length="150" supplier="log_message"/>
+    <panel id="logs" pos="10,460" size="520,150" max-length="150" min-length="150"/>
 </container>

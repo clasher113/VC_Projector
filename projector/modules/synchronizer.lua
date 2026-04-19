@@ -7,8 +7,6 @@ local multiplayer = require("projector:multiplayer")
 local rules = require("projector:rules")
 
 local synchronizer = {
-    messages = {},
-    on_disconnect_callback = nil,
     on_lag_callback = nil
 }
 
@@ -25,6 +23,12 @@ local wait_for_respond = false
 local multiplayer_frames_count = 0
 local status = util.synchronizer_status.NOT_CONNECTED
 local capturing_players = {}
+
+local function on_disconnect()
+    synchronizer.set_status(util.synchronizer_status.NOT_CONNECTED)
+    wait_for_respond = false
+    client = nil
+end
 
 local function send_to_players(api, byte_array, owner_pid, event_name)
     local player_config = config.get_player_config(owner_pid)
@@ -177,7 +181,7 @@ function synchronizer.start_server()
             if (client == nil) then
                 debug.log("user connected")
                 client = socket
-                status = util.synchronizer_status.CONNECTED
+                synchronizer.set_status(util.synchronizer_status.CONNECTED)
             else
                 socket:close()
                 debug.log("closed extra connection")
@@ -272,21 +276,19 @@ function synchronizer.server_routine()
 	refresh_timer = math.fmod(refresh_timer - refresh_interval, refresh_interval)
 
     if (util.status_info[status].timeout and status_update_time + STATUS_TIMEOUT_DURATION < time.uptime()) then
-        table.insert(synchronizer.messages, gui.str(util.status_info[status].string) .. " " .. gui.str("timeout", PACK_ID))
+        util.get_gui().log_message(gui.str(util.status_info[status].string) .. " " .. gui.str("timeout", PACK_ID))
         if (status == util.synchronizer_status.INIT) then
             config.rgb_mode = false
         end
-        status = STATUS_FALLBACK
+        synchronizer.set_status(STATUS_FALLBACK)
     end
 
     if (status ~= util.synchronizer_status.NOT_CONNECTED and (client == nil or not client:is_connected())) then
         debug.log("client disconnect")
-        if (synchronizer.on_disconnect_callback ~= nil) then
-            synchronizer.on_disconnect_callback()
-        end
-        status = util.synchronizer_status.NOT_CONNECTED
-        wait_for_respond = false
-        client = nil
+        if (status == util.synchronizer_status.CAPTURING) then
+			util.get_gui().stop()
+		end
+        on_disconnect()
     end
     if (client == nil) then return end
 
@@ -302,24 +304,24 @@ function synchronizer.server_routine()
 
         local ping = buffer:get_bool()
         if (ping == false) then
-            client:close()        
-            client = nil
+            client:close()
+            on_disconnect()
             return
         end
         if (bit.band(bit_mask, util.packet_bitmask.SYNC) > 0) then
             local sync_success = buffer:get_bool()
             if (sync_success == false) then
-                status = util.synchronizer_status.CONNECTED
-                table.insert(synchronizer.messages, gui.str("Synchronization error", PACK_ID))
+                synchronizer.set_status(util.synchronizer_status.CONNECTED)
+                util.get_gui().log_message(gui.str("Synchronization error", PACK_ID))
             else
-                status = util.synchronizer_status.READY
-                table.insert(synchronizer.messages, gui.str("Synchronization success", PACK_ID))
+                synchronizer.set_status(util.synchronizer_status.READY)
+                util.get_gui().log_message(gui.str("Synchronization success", PACK_ID))
             end
         end
         if (bit.band(bit_mask, util.packet_bitmask.CAPTURE) > 0) then
             local capture_success = buffer:get_bool()
             if (capture_success == false) then
-                table.insert(synchronizer.messages, gui.str("Capture error", PACK_ID))
+                util.get_gui().log_message(gui.str("Capture error", PACK_ID))
             elseif (status == util.synchronizer_status.CAPTURING) then
                 if (synchronizer.on_lag_callback ~= nil) then
                     if (synchronizer.on_lag_callback()) then
@@ -381,6 +383,9 @@ function synchronizer.set_status(new_status)
     if (util.status_info[status].timeout) then
         status_update_time = time.uptime()
     end
+    local projector_gui = util.get_gui()
+    projector_gui.set_gui_enabled(util.status_info[status].gui_enabled)
+    projector_gui.refresh_status_label(status)
 end
 
 function synchronizer.get_status()

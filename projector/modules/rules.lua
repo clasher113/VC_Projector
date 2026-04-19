@@ -90,6 +90,7 @@ function rules.on_world_open(rgb_initialized)
                 parse(role_rules[role_name], _rules)
             end
         end
+        debug.log("Projector: Loaded " .. tostring(table.count_pairs(rule_set)) .. " rule set(s)")
     end
 
     if (rgb_initialized == false) then

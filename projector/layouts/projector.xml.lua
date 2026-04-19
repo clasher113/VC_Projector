@@ -16,20 +16,33 @@ local axes = {
 	[util.axis.Z] = "Z"
 }
 
-local show_additional_settings = true
+local show_additional_settings = false
 local logs_num = 1
 local single_time_init = false
-local gui_enabled = true
+local lag_timer = 0
 
+local LAG_MAX_MILLISECONDS = 3000
 local LOGS_MAX_COUNT = 20
 
-function on_gui_render()
-	for k, v in pairs(synchronizer.messages) do
-		log_message(v)
-		synchronizer.messages[k] = nil
+local function desync()
+	if (synchronizer.get_status() == util.synchronizer_status.READY) then
+		synchronizer.set_status(util.synchronizer_status.CONNECTED)
 	end
-	set_gui_enabled(util.status_info[synchronizer.get_status()].gui_enabled)
+end
 
+local function refresh_orientation_button()
+	document["orientation"].text = gui.str("Orientation", PACK_ID) .. ": " .. gui.str(orientations[config.orientation], PACK_ID)
+end
+
+local function refresh_axis_button()
+	document["axis"].text = gui.str("Axis", PACK_ID) .. ": " .. axes[config.axis]
+end
+
+local function refresh_additional_settings_button()
+	document["additional_settings"].text = gui.str("Additional settings", PACK_ID) .. (show_additional_settings and " <<" or " >>")
+end
+
+local function on_gui_render()
 	local anim_speed = 2000 -- pixels per second
 	local size = document["root"].size
 	if (show_additional_settings == true and size[1] < 860) then
@@ -42,77 +55,85 @@ function on_gui_render()
 end
 
 function on_open()
-	if (single_time_init == false) then
-		single_time_init = true
+	if (single_time_init == true) then return end
+	single_time_init = true
 
-		document["orientation"].text = gui.str("Orientation", PACK_ID) .. ": " .. gui.str(orientations[config.orientation], PACK_ID)
-		document["axis"].text = gui.str("Axis", PACK_ID) .. ": " .. axes[config.axis]
-		if (not rgb_addon.is_loaded()) then
-			document["rgb_mode"].tooltip = gui.str("RGB addon not installed", PACK_ID)
-			document["rgb_mode"].tooltipDelay = 0
-		end
-		document["allow_non_obstacle_blocks_checkbox"].checked = config.allow_non_obstacle_blocks
-		document["allow_translucent_blocks_checkbox"].checked = config.allow_translucent_blocks
-		document["allow_hidden_blocks_checkbox"].checked = config.allow_hidden_blocks
-		document["allow_emissive_blocks_checkbox"].checked = config.allow_emissive_blocks
-		document["allow_shadeless_blocks_checkbox"].checked = config.allow_shadeless_blocks
-        if (config.same_size) then
-            config.capture_size = table.copy(config.resolution)
-        end
-		document["use_bytearray"].checked = config.use_bytearray
-		document["use_chunks"].checked = config.use_chunks
-		document["highlight_area_checkbox"].checked = config.highlight_area
-		rgb_consumer(config.rgb_mode)
-		toggle_additional_settings()
-		same_size_consumer(config.same_size)
-		stop_on_lag_consumer(config.stop_on_lag_duration)
-		multiplayer_buffer_size_consumer(config.multiplayer_buffer_size)
+	document["allow_non_obstacle_blocks_checkbox"].checked = config.allow_non_obstacle_blocks
+	document["allow_translucent_blocks_checkbox"].checked = config.allow_translucent_blocks
+	document["allow_hidden_blocks_checkbox"].checked = config.allow_hidden_blocks
+	document["allow_emissive_blocks_checkbox"].checked = config.allow_emissive_blocks
+	document["allow_shadeless_blocks_checkbox"].checked = config.allow_shadeless_blocks
+	document["use_bytearray"].checked = config.use_bytearray
+	document["use_chunks"].checked = config.use_chunks
+	document["highlight_area_checkbox"].checked = config.highlight_area
+	document["clear_on_stop_checkbox"].checked = config.clear_on_stop
+	document["refresh_rate_trackbar"].value = config.refresh_rate
+	refresh_orientation_button()
+	refresh_axis_button()
+	rgb_consumer(config.rgb_mode)
+	same_size_consumer(config.same_size)
+	fps_consumer(config.refresh_rate)
+	stop_on_lag_consumer(config.stop_on_lag_duration)
+	multiplayer_buffer_size_consumer(config.multiplayer_buffer_size)
+	refresh_additional_settings_button()
+	refresh_status_label(synchronizer.get_status())
+	refresh_framerate_label(0)
 
-		document["root"]:setInterval(1, on_gui_render)
-		synchronizer.on_disconnect_callback = function()
-			if (synchronizer.get_status() == util.synchronizer_status.CAPTURING) then
-				stop()
-			end
-		end
-		synchronizer.on_lag_callback = function()
-			local enabled = config.stop_on_lag_duration ~= document["stop_on_lag_trackbar"].max
-			local delta = time.delta() * 1000
-			if (enabled and delta > config.stop_on_lag_duration) then
-				stop()
-				log_message(gui.str("Stopped due to lag", PACK_ID) .. " " .. tostring(math.round(delta, 0)) .. "ms, " .. 
-					gui.str("limit", PACK_ID) .. " " .. tostring(config.stop_on_lag_duration) .. "ms")
-				return true
-			end
-			return false
-		end
+	if (not rgb_addon.is_loaded()) then
+		document["rgb_mode"].tooltip = gui.str("RGB addon not installed", PACK_ID)
+		document["rgb_mode"].tooltipDelay = 0
+	end
 
-        local current_rules = rules.get_rules()
-        document["rgb_mode"].enabled = current_rules.allow_rgb_mode
-        document["refresh_rate_trackbar"].max = current_rules.fps_max
-        if (#current_rules.allowed_orientations == 1) then
-            document["orientation"].enabled = false
-        end
-        if (#current_rules.allowed_axes == 1) then
-            document["axis"].enabled = false
-        end
-		if (multiplayer.get_side() == multiplayer.sides.SINGLEPLAYER) then
-			document["multiplayer_buffer_size_trackbar"]:destruct()
-			document["multiplayer_buffer_size_label"]:destruct()
+	document["root"]:setInterval(1, on_gui_render)
+
+	synchronizer.on_lag_callback = function()
+		local enabled = config.stop_on_lag_duration ~= document["stop_on_lag_trackbar"].max
+		local delta = time.delta() * 1000
+		if (enabled and delta > config.stop_on_lag_duration) then
+			lag_timer = lag_timer + delta
+		else
+			lag_timer = 0
 		end
-		if (rgb_addon.is_loaded() or multiplayer.get_side() == multiplayer.sides.CLIENT) then
-			document["rgb_mode_settings_label"]:destruct()
-			document["allow_non_obstacle_blocks_checkbox"]:destruct()
-			document["allow_translucent_blocks_checkbox"]:destruct()
-			document["allow_hidden_blocks_checkbox"]:destruct()
-			document["allow_emissive_blocks_checkbox"]:destruct()
-			document["allow_shadeless_blocks_checkbox"]:destruct()
+		if (lag_timer > LAG_MAX_MILLISECONDS) then
+			stop()
+			log_message(gui.str("Stopped due to lag", PACK_ID) .. " " .. tostring(math.round(delta, 0)) .. "ms, " ..
+				gui.str("limit", PACK_ID) .. " " .. tostring(config.stop_on_lag_duration) .. "ms")
+			lag_timer = 0
+			return true
 		end
+		return false
+	end
+
+	local current_rules = rules.get_rules()
+	document["rgb_mode"].enabled = current_rules.allow_rgb_mode
+	document["refresh_rate_trackbar"].max = current_rules.fps_max
+	if (#current_rules.allowed_orientations == 1) then
+		document["orientation"].enabled = false
+	end
+	if (#current_rules.allowed_axes == 1) then
+		document["axis"].enabled = false
+	end
+	if (multiplayer.get_side() == multiplayer.sides.SINGLEPLAYER) then
+		document["multiplayer_buffer_size_trackbar"]:destruct()
+		document["multiplayer_buffer_size_label"]:destruct()
+	end
+	if (rgb_addon.is_loaded()) then
+		document["rgb_mode_settings_label"]:destruct()
+		document["allow_non_obstacle_blocks_checkbox"]:destruct()
+		document["allow_translucent_blocks_checkbox"]:destruct()
+		document["allow_hidden_blocks_checkbox"]:destruct()
+		document["allow_emissive_blocks_checkbox"]:destruct()
+		document["allow_shadeless_blocks_checkbox"]:destruct()
+	elseif (multiplayer.get_side() == multiplayer.sides.CLIENT) then
+		document["allow_non_obstacle_blocks_checkbox"].enabled = false
+		document["allow_translucent_blocks_checkbox"].enabled = false
+		document["allow_hidden_blocks_checkbox"].enabled = false
+		document["allow_emissive_blocks_checkbox"].enabled = false
+		document["allow_shadeless_blocks_checkbox"].enabled = false
 	end
 end
 
 function set_gui_enabled(flag)
-	if (flag == gui_enabled) then return end
-	gui_enabled = flag
 	document["settings_1"].enabled = flag
 	document["settings_2"].enabled = flag
 	document["sync"].enabled = flag
@@ -130,14 +151,14 @@ function log_message(string)
 	logs_num = logs_num + 1
 end
 
-function status_supplier(string)
-	return gui.str("Status", PACK_ID) .. ": " .. gui.str(util.status_info[synchronizer.get_status()].string, PACK_ID)
+function refresh_status_label(status)
+	document["status_label"].text = gui.str("Status", PACK_ID) .. ": " .. gui.str(util.status_info[status].string, PACK_ID)
 end
 
 function stop()
 	synchronizer.set_status(util.synchronizer_status.READY)
 	document["main_button"].text = gui.str("Start", PACK_ID)
-	display.current_framerate = 0
+	refresh_framerate_label(0)
 	if (config.clear_on_stop) then
 		display.clear(hud.get_player())
 	end
@@ -183,41 +204,32 @@ end
 
 function toggle_orientation()
 	config.orientation = config.orientation + 1
-	if (config.orientation > #(orientations)) then 
+	if (config.orientation > #(orientations)) then
 		config.orientation = 1
 	end
-	document["orientation"].text = gui.str("Orientation", PACK_ID) .. ": " .. gui.str(orientations[config.orientation], PACK_ID)
+	refresh_orientation_button()
 	highlight.refresh()
 end
 
 function toggle_axis()
 	config.axis = config.axis + 1
-	if (config.axis > #(axes)) then 
+	if (config.axis > #(axes)) then
 		config.axis = 1
 	end
-	document["axis"].text = gui.str("Axis", PACK_ID) .. ": " .. axes[config.axis]
+	refresh_axis_button()
 	highlight.refresh()
 end
 
-function fps_consumer(string)
-	local new_refresh_rate = tonumber(string)	
-	if (config.refresh_rate == new_refresh_rate) then return end
-	config.refresh_rate = new_refresh_rate
-	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
-end
-
-function fps_supplier()
-	document["refresh_rate_label"].text = gui.str("Projection refresh rate", PACK_ID) .. ": " .. tostring(config.refresh_rate)
-	return config.refresh_rate
+function fps_consumer(value)
+	config.refresh_rate = value
+	document["refresh_rate_label"].text = gui.str("Projection refresh rate", PACK_ID) .. ": " .. tostring(value)
+	if (config.refresh_rate == value) then return end
+	desync()
 end
 
 function rgb_consumer(checked)
 	config.rgb_mode = checked
 	document["rgb_mode"].checked = config.rgb_mode
-end
-
-function rgb_supplier()
-	return config.rgb_mode
 end
 
 local function validate_textbox(input, min, max, textbox)
@@ -250,7 +262,7 @@ function projection_size_x_consumer(string)
 	if (config.same_size == true) then
 		capture_size_x_consumer(string)
 	end
-	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
+	desync()
 end
 
 function projection_size_x_supplier()
@@ -270,7 +282,7 @@ function projection_size_y_consumer(string)
 	if (config.same_size == true) then
 		capture_size_y_consumer(string)
 	end
-	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
+	desync()
 end
 
 function projection_size_y_supplier()
@@ -285,7 +297,7 @@ end
 function capture_size_x_consumer(string)
 	if (not capture_size_x_validator(string)) then return end
 	config.capture_size[1] = tonumber(string)
-	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
+	desync()
 end
 
 function capture_size_x_supplier()
@@ -300,7 +312,7 @@ end
 function capture_size_y_consumer(string)
 	if (not capture_size_y_validator(string)) then return end
 	config.capture_size[2] = tonumber(string)
-	if (synchronizer.get_status() == util.synchronizer_status.READY) then synchronizer.set_status(util.synchronizer_status.CONNECTED) end
+	desync()
 end
 
 function capture_size_y_supplier()
@@ -362,8 +374,8 @@ function same_size_consumer(checked)
 	document["capture_size_x"].enabled = not checked
 	document["capture_size_y"].enabled = not checked
 	if (checked) then
-		capture_size_x_consumer(document["projection_size_x"].text)
-		capture_size_y_consumer(document["projection_size_y"].text)
+		capture_size_x_consumer(config.resolution[1])
+		capture_size_y_consumer(config.resolution[2])
 		highlight.refresh()
 	end
 end
@@ -372,17 +384,13 @@ function clear_on_stop_consumer(checked)
 	config.clear_on_stop = checked
 end
 
-function clear_on_stop_supplier()
-	return config.clear_on_stop
-end
-
-function framerate_supplier()
-	return gui.str("Current framerate", PACK_ID) .. ": " .. tostring(display.current_framerate)
+function refresh_framerate_label(framerate)
+	document["framerate_label"].text = gui.str("Current framerate", PACK_ID) .. ": " .. tostring(framerate)
 end
 
 function toggle_additional_settings()
 	show_additional_settings = not show_additional_settings
-	document["additional_settings"].text = gui.str("Additional settings", PACK_ID) .. (show_additional_settings and " <<" or " >>")
+	refresh_additional_settings_button()
 end
 
 function use_bytearray_consumer(checked)
@@ -413,27 +421,27 @@ end
 
 function allow_non_obstacle_blocks_consumer(flag)
 	config.allow_non_obstacle_blocks = flag
-	rgb_addon.initialize()
+	rgb_addon.initialize(false)
 end
 
 function allow_translucent_blocks_consumer(flag)
 	config.allow_translucent_blocks = flag
-	rgb_addon.initialize()
+	rgb_addon.initialize(false)
 end
 
 function allow_hidden_blocks_consumer(flag)
 	config.allow_hidden_blocks = flag
-	rgb_addon.initialize()
+	rgb_addon.initialize(false)
 end
 
 function allow_emissive_blocks_consumer(flag)
 	config.allow_emissive_blocks = flag
-	rgb_addon.initialize()
+	rgb_addon.initialize(false)
 end
 
 function allow_shadeless_blocks_consumer(flag)
 	config.allow_shadeless_blocks = flag
-	rgb_addon.initialize()
+	rgb_addon.initialize(false)
 end
 
 function clear_display()
@@ -443,5 +451,11 @@ function clear_display()
         config.write()
 		display.clear(hud.get_player())
 		log_message(gui.str("Display cleaned", PACK_ID))
+	end
+end
+
+function on_close()
+	if (multiplayer.get_side() == multiplayer.sides.SINGLEPLAYER) then
+		config.write()
 	end
 end

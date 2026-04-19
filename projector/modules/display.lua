@@ -7,9 +7,7 @@ local bit_converter = require("core:bit_converter")
 local BLOCK_ID_PREVIOUS = -1
 local CHUNK_SIZE = { 16, 16 }
 
-local display = {
-	current_framerate = 0
-}
+local display = {}
 
 local database = {
     --[player_id] = {
@@ -38,10 +36,11 @@ local function get_mohochrome_block(pixels, index)
 end
 
 local function update_framerate()
+	if (multiplayer.get_side() == multiplayer.sides.SERVER) then return end
 	local uptime = time.uptime()
 	if (uptime > framerate_time) then
 		framerate_time = uptime + 1
-		display.current_framerate = framerate
+		util.get_gui().refresh_framerate_label(framerate)
 		framerate = 0
 	end
 	framerate = framerate + 1
