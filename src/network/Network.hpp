@@ -8,8 +8,8 @@
 #include <queue>
 #include <SFML/Network/TcpSocket.hpp>
 
-using OutPacketTypes = std::variant<HeaderPacket, SyncPacketOut, CapturePacketOut, InitPacketOut>;
-using InPacketTypes = std::variant<HeaderPacket, SyncPacketIn, CapturePacketIn, InitPacketIn>;
+using OutPacketTypes = std::variant<HeaderPacket, SyncPacketOut, CapturePacketOut>;
+using InPacketTypes = std::variant<HeaderPacket, SyncPacketIn, CapturePacketIn>;
 
 class Network {
 public:

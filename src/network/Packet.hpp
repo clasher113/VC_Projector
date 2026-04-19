@@ -47,17 +47,3 @@ struct CapturePacketOut {
     std::vector<uint8_t> pixels;
     std::vector<Chunk> chunks;
 };
-
-struct InitPacketIn {
-    InitPacketIn(const void*& data) {
-        texturesData.resize(unpackData<uint32_t>(data));
-        memcpy(texturesData.data(), data, texturesData.size());
-        data = static_cast<const uint8_t*>(data) + texturesData.size();
-    };
-    std::vector<uint8_t> texturesData;
-};
-
-struct InitPacketOut {
-    uint8_t initStatus = 1;
-    std::vector<uint8_t> texturesColors;
-};

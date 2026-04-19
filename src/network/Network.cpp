@@ -171,8 +171,6 @@ void Network::disassemble(const void* data) {
 		m_inPacketQueue.emplace(unpackData<SyncPacketIn>(data));
 	if (bitMask & BitMask::CAPTURE)
 		m_inPacketQueue.emplace(unpackData<CapturePacketIn>(data));
-	if (bitMask & BitMask::INIT)
-		m_inPacketQueue.emplace(InitPacketIn(data));
 }
 
 std::vector<uint8_t> Network::assemble() {
@@ -213,15 +211,6 @@ std::vector<uint8_t> Network::assemble() {
 							packData(data, chunk.data.data(), size);
 						}
 					}
-				}
-			}
-			else if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, InitPacketOut>) {
-				bitMask |= BitMask::INIT;
-				packData(data, REFNSIZE(packet.initStatus));
-				if (packet.initStatus) {
-					const uint32_t size = static_cast<uint32_t>(packet.texturesColors.size()) * sizeof(*packet.texturesColors.data());
-					packData(data, REFNSIZE(size));
-					packData(data, packet.texturesColors.data(), size);				
 				}
 			}
 		}, m_outPacketQueue.front());
