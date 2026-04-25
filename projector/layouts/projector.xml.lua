@@ -197,7 +197,7 @@ function synchronize()
 		log_message(gui.str("Not connected", PACK_ID))
 		return
 	end
-	log_message(gui.str("Synchronization", PACK_ID))
+	log_message(gui.str("Synchronization...", PACK_ID))
 	synchronizer.set_status(util.synchronizer_status.SYNCING)
 	config.write()
 end
@@ -221,9 +221,9 @@ function toggle_axis()
 end
 
 function fps_consumer(value)
-	config.refresh_rate = value
 	document["refresh_rate_label"].text = gui.str("Projection refresh rate", PACK_ID) .. ": " .. tostring(value)
 	if (config.refresh_rate == value) then return end
+	config.refresh_rate = value
 	desync()
 end
 

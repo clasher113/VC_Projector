@@ -6,8 +6,14 @@ local rgb_addon = {
 }
 
 local is_loaded = false
+local BLOCK_ID_PREVIOUS = -1
 local RGB_ADDON_ID = "projector_rgb_addon"
 local LIBPNG_ID = "libpng"
+
+local function init_internal_blocks()
+	rgb_addon.blocks_indices[65535] = block.index("core:air")
+	rgb_addon.blocks_indices[65534] = BLOCK_ID_PREVIOUS
+end
 
 local function image_get_pixel(image, x, y, server_side)
 	if (server_side) then
@@ -33,6 +39,7 @@ function rgb_addon.on_world_open(is_server_side)
 		for i=0, 4095 do
 			rgb_addon.blocks_indices[i] = block.index(RGB_ADDON_ID .. ":rgb_" .. tostring(i))
 		end
+		init_internal_blocks()
 		is_loaded = true
 	else
 		if (is_server_side and pack.is_installed(LIBPNG_ID)) then
@@ -193,8 +200,7 @@ function rgb_addon.initialize(is_server_side)
 		end
 	end
 
-	rgb_addon.blocks_indices[65535] = block.index("core:air")
-	rgb_addon.blocks_indices[65534] = -1
+	init_internal_blocks()
 
 	return true
 end
